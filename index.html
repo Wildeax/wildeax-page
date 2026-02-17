@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="theme-color" content="#0b0e12" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wildeax — Digital Artist & Dev</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      // Set dark mode early to avoid FOUC
+      try {
+        const saved = localStorage.getItem('theme');
+        const dark = saved ? saved === 'dark' : true;
+        document.documentElement.classList.toggle('dark', dark);
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root" class="bg-[#0b0e12] text-zinc-200 antialiased selection:bg-brand-500/30 selection:text-white"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

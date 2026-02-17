@@ -1,0 +1,24 @@
+name = "wildeax-page"
+main = "src/worker.ts"
+compatibility_date = "2025-08-01"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[vars]
+# Add any environment variables here
+
+# Uncomment after initial deploy and domain is on Cloudflare
+# [[routes]]
+# pattern = "wildeax.com"
+# custom_domain = true
+# [[routes]]
+# pattern = "www.wildeax.com"
+# custom_domain = true
+
+[[r2_buckets]]
+binding = "DOWNLOADS"
+bucket_name = "wildeax-page"
+
+
