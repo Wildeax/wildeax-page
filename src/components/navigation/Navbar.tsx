@@ -31,7 +31,7 @@ const Navbar = ({ children }: NavbarProps) => {
               <img src={swIcon} alt={t('nav.splitwars')} className="h-5 w-5" />
             </span>
           </a>
-          <a href="https://minesweeper.wildeax.com/" target="_blank" rel="noreferrer" title={t('nav.minesweeper')}>
+          <a href="https://sweepr98.com/" target="_blank" rel="noreferrer" title={t('nav.minesweeper')}>
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors">
               <img src={minesweeperIcon} alt={t('nav.minesweeper')} className="h-5 w-5" />
             </span>

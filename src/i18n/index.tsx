@@ -10,7 +10,7 @@ const resources: Resources = {
     'nav.tagline': 'Digital Artist & Dev',
     'nav.arena': 'Arena Assistant',
     'nav.splitwars': 'Splitwars',
-    'nav.minesweeper': 'Minesweeper',
+    'nav.minesweeper': 'Sweepr',
 
     'hero.badge': 'Open to collaborations',
     'hero.title': 'Wildeax',
@@ -79,7 +79,7 @@ const resources: Resources = {
     'nav.tagline': 'Artista digital y desarrollador',
     'nav.arena': 'Arena Assistant',
     'nav.splitwars': 'Splitwars',
-    'nav.minesweeper': 'Buscaminas',
+    'nav.minesweeper': 'Sweepr',
 
     'hero.badge': 'Abierto a colaboraciones',
     'hero.title': 'Wildeax',
