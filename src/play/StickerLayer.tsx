@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { PlayableSurface } from '@/play/PlayableSurface'
 import { useSharedList } from '@/play/sync'
 import { addSticker, STICKER_KINDS } from '@/play/stickers'
 import type { PlacedSticker, StickerKind } from '@/play/stickers'
@@ -21,6 +22,15 @@ export function StickerLayer() {
   const [stickers, setStickers] = useSharedList<PlacedSticker>('wildeax-stickers', EMPTY)
   const [selected, setSelected] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!selected) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelected(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selected])
+
   const placed = Array.isArray(stickers) ? stickers : EMPTY
 
   return (
@@ -34,17 +44,22 @@ export function StickerLayer() {
         {placed.map((s) => {
           const kind = kindById(s.kind)
           if (!kind) return null
+          // Each sticker is a PlayableSurface at the layer origin with its
+          // position carried in the transform, so it gets the same click
+          // threshold, long-press and bounds clamp as a window. Moves write
+          // straight back into the shared list. Replacing the whole array per
+          // pointer move is chatty but fine at the 300 cap.
           return (
-            <div
-              key={s.id}
-              className="absolute"
-              style={{
-                left: s.x,
-                top: s.y,
-                transform: `rotate(${s.rotation}deg) scale(${s.scale})`,
-              }}
-            >
-              {renderKind(kind)}
+            <div key={s.id} className="pointer-events-auto absolute left-0 top-0">
+              <PlayableSurface
+                caps={['move']}
+                transform={{ x: s.x, y: s.y, rotation: s.rotation, scale: s.scale }}
+                onTransform={(next) =>
+                  setStickers(placed.map((p) => (p.id === s.id ? { ...p, x: next.x, y: next.y } : p)))
+                }
+              >
+                {renderKind(kind)}
+              </PlayableSurface>
             </div>
           )
         })}
@@ -78,7 +93,7 @@ export function StickerLayer() {
       )}
 
       {/* Palette dock. */}
-      <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur">
+      <div className="fixed bottom-4 left-1/2 z-40 flex md:bottom-14 -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur">
         {STICKER_KINDS.map((kind) => (
           <button
             key={kind.id}
