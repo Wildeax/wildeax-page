@@ -25,9 +25,12 @@ export function StickerLayer() {
 
   return (
     <>
-      {/* Placed stickers. aria-hidden because they carry no information a
-          screen reader user needs, and announcing 300 of them is hostile. */}
-      <div className="pointer-events-none fixed inset-0 z-30" aria-hidden="true">
+      {/* Placed stickers live in DOCUMENT coordinates, so this container is
+          absolute inside the page wrapper rather than fixed to the viewport.
+          Fixed would pin every sticker to the window and drag them along as
+          the page scrolls. aria-hidden because they carry no information a
+          screen reader needs, and announcing 300 of them is hostile. */}
+      <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true">
         {placed.map((s) => {
           const kind = kindById(s.kind)
           if (!kind) return null
@@ -60,8 +63,10 @@ export function StickerLayer() {
               addSticker(placed, {
                 id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                 kind: selected,
-                x: e.clientX - 16,
-                y: e.clientY - 16,
+                // Viewport coords plus scroll offset, because the layer above
+                // positions in document space.
+                x: e.clientX + window.scrollX - 16,
+                y: e.clientY + window.scrollY - 16,
                 rotation: Math.round((Math.random() - 0.5) * 40),
                 scale: 1,
                 placedAt: Date.now(),
