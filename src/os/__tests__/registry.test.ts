@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { WINDOWS, DESKTOP_ICON_IDS } from '@/os/registry'
 import { PROJECTS } from '@/os/projects'
-import { resources } from '@/i18n'
+import { resources } from '@/i18n/resources'
 
 describe('WINDOWS', () => {
   it('has unique ids', () => {
