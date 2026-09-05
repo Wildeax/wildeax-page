@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
+import type { DragEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { clampToBounds, exceedsDragThreshold, LONG_PRESS_MS } from '@/play/drag'
 import type { Capability, Point, Transform } from '@/play/types'
 
@@ -17,6 +17,14 @@ interface DragState {
   /** False until the threshold is crossed, or until the touch long-press fires. */
   active: boolean
 }
+
+/**
+ * A press on any of these is a click, never a drag. Every drag library has the
+ * same escape hatch (react-draggable calls it `cancel`). Without it a press on
+ * a close button that moves 5px, which is most real clicks, drags the window
+ * and the click never fires.
+ */
+const NO_DRAG_SELECTOR = 'button, a, input, select, textarea, [data-no-drag]'
 
 function prefersReducedMotion(): boolean {
   return (
@@ -52,6 +60,7 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!canMove) return
+      if ((e.target as Element).closest(NO_DRAG_SELECTOR)) return
       const pointerId = e.pointerId
       drag.current = {
         pointerId,
@@ -133,6 +142,16 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
     [clearLongPress],
   )
 
+  // Images and links start the browser's own drag-and-drop on press, which
+  // fires pointercancel and kills our gesture. A window that is mostly a photo
+  // becomes undraggable. Refusing native drag here covers every descendant.
+  const onDragStart = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      if (canMove) e.preventDefault()
+    },
+    [canMove],
+  )
+
   const css = `translate(${transform.x}px, ${transform.y}px) rotate(${transform.rotation}deg) scale(${transform.scale})`
 
   return (
@@ -142,9 +161,12 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
+      onDragStart={onDragStart}
       style={{
         transform: css,
         touchAction: canMove ? 'pan-y' : undefined,
+        // Once lifted, stop text selection from growing under the pointer.
+        userSelect: lifted ? 'none' : undefined,
         // The settle animation is ambient motion nobody asked for.
         transition: lifted || reducedMotion ? 'none' : 'transform 120ms ease-out',
         zIndex: lifted ? 40 : undefined,

@@ -20,16 +20,20 @@ import { WorkWindow } from '@/os/content/WorkWindow'
 type FlightKind = 'open' | 'close' | 'minimize' | 'restore'
 
 /**
- * The one window mid-animation. The state change it represents is dispatched
- * on animationend, so a minimized window is only hidden once it has visibly
- * gone, and a restored one is visible for the whole of its return.
+ * A window mid-animation. The state change it represents is dispatched on
+ * animationend, so a minimized window is only hidden once it has visibly gone,
+ * and a restored one is visible for the whole of its return.
+ *
+ * Keyed per window. Tracking a single flight meant minimizing A and then
+ * closing B inside 440ms dropped A's animationend, and A snapped back.
  */
 interface Flight {
-  id: WindowId
   kind: FlightKind
   dx: number
   dy: number
 }
+
+type Flights = Partial<Record<WindowId, Flight>>
 
 function prefersReducedMotion(): boolean {
   return (
@@ -77,32 +81,44 @@ export function Desktop() {
   const { t } = useI18n()
   const isDesktop = useIsDesktop()
   const [state, dispatch] = useReducer(osReducer, WINDOWS, initialOsState)
-  const [flight, setFlight] = useState<Flight | null>(null)
+  const [flights, setFlights] = useState<Flights>({})
   const reduced = prefersReducedMotion()
+
+  function startFlight(id: WindowId, flight: Flight) {
+    setFlights((current) => ({ ...current, [id]: flight }))
+  }
+
+  function endFlight(id: WindowId) {
+    setFlights((current) => {
+      const next = { ...current }
+      delete next[id]
+      return next
+    })
+  }
 
   function restoreWindow(id: WindowId) {
     // Measure before dispatch: the wrapper has a rect while hidden, and this
     // is where the reverse flight starts from.
     const off = dockOffset(id)
     dispatch({ type: 'restore', id })
-    if (!reduced) setFlight({ id, kind: 'restore', ...off })
+    if (!reduced) startFlight(id, { kind: 'restore', ...off })
   }
 
   function openWindow(id: WindowId) {
     if (isMinimized(state, id)) return restoreWindow(id)
     const wasVisible = isVisible(state, id)
     dispatch({ type: 'open', id })
-    if (!wasVisible && !reduced) setFlight({ id, kind: 'open', dx: 0, dy: 0 })
+    if (!wasVisible && !reduced) startFlight(id, { kind: 'open', dx: 0, dy: 0 })
   }
 
   function closeWindow(id: WindowId) {
     if (reduced) return dispatch({ type: 'close', id })
-    setFlight({ id, kind: 'close', dx: 0, dy: 0 })
+    startFlight(id, { kind: 'close', dx: 0, dy: 0 })
   }
 
   function minimizeWindow(id: WindowId) {
     if (reduced) return dispatch({ type: 'minimize', id })
-    setFlight({ id, kind: 'minimize', ...dockOffset(id) })
+    startFlight(id, { kind: 'minimize', ...dockOffset(id) })
   }
 
   function selectTask(id: WindowId) {
@@ -114,10 +130,11 @@ export function Desktop() {
     return (e: AnimationEvent<HTMLDivElement>) => {
       // Children may animate too; only the wrapper's own animation counts.
       if (e.target !== e.currentTarget) return
-      if (!flight || flight.id !== id) return
+      const flight = flights[id]
+      if (!flight) return
       if (flight.kind === 'minimize') dispatch({ type: 'minimize', id })
       if (flight.kind === 'close') dispatch({ type: 'close', id })
-      setFlight(null)
+      endFlight(id)
     }
   }
 
@@ -163,7 +180,7 @@ export function Desktop() {
 
       {WINDOWS.map((w) => {
         const shown = isVisible(state, w.id)
-        const inFlight = flight?.id === w.id ? flight : null
+        const inFlight = flights[w.id]
         // z-index lives here, on the wrapper OUTSIDE PlayableSurface. The
         // surface always has a transform, which is its own stacking context,
         // so a z-index inside it can never order one window over another.

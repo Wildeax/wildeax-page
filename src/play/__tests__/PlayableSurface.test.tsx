@@ -109,6 +109,36 @@ describe('PlayableSurface', () => {
     expect(onTransform).toHaveBeenLastCalledWith({ x: 850, y: 0, rotation: 0, scale: 1 })
   })
 
+  it('does not start a drag from a button inside it, so the click still lands', () => {
+    const onTransform = vi.fn()
+    const { container } = render(
+      <PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={onTransform}>
+        <button type="button">close</button>
+      </PlayableSurface>,
+    )
+    const surface = container.firstElementChild as HTMLElement
+    givePage(surface, { left: 100, top: 100, width: 50, height: 50 }, 1000, 800)
+    const button = surface.querySelector('button')!
+    // A real click on a small button usually moves a few pixels. Without the
+    // cancel selector that is a 40px drag and the click never fires.
+    fireEvent.pointerDown(button, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(button, { pointerId: 1, clientX: 40, clientY: 20 })
+    fireEvent.pointerUp(button, { pointerId: 1, clientX: 40, clientY: 20 })
+    expect(onTransform).not.toHaveBeenCalled()
+  })
+
+  it('refuses native drag-and-drop, so an image inside cannot hijack the gesture', () => {
+    const { container } = render(
+      <PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={() => {}}>
+        <img src="/x.png" alt="" />
+      </PlayableSurface>,
+    )
+    const img = container.querySelector('img')!
+    const evt = new Event('dragstart', { bubbles: true, cancelable: true })
+    img.dispatchEvent(evt)
+    expect(evt.defaultPrevented).toBe(true)
+  })
+
   it('ignores drags when move is not among its capabilities', () => {
     const onTransform = vi.fn()
     const { container } = render(
