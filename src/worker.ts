@@ -76,12 +76,19 @@ export default {
       return html
     }
 
-    // Add long cache for non-HTML static assets
+    // Long cache for non-HTML static assets. Vite fingerprints everything under
+    // /assets/, so only those are safe to freeze. Files copied from public/ keep
+    // their name across deploys, so og.png and logo.svg must stay revalidatable.
     const contentType = response.headers.get('content-type') || ''
     if (response.ok && !contentType.includes('text/html')) {
       const newHeaders = new Headers(response.headers)
       if (!newHeaders.has('cache-control')) {
-        newHeaders.set('cache-control', 'public, max-age=31536000, immutable')
+        newHeaders.set(
+          'cache-control',
+          url.pathname.startsWith('/assets/')
+            ? 'public, max-age=31536000, immutable'
+            : 'public, max-age=3600, must-revalidate'
+        )
       }
       return new Response(response.body, { status: response.status, headers: newHeaders })
     }
