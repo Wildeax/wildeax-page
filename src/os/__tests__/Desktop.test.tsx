@@ -53,6 +53,23 @@ describe('Desktop at desktop widths', () => {
     expect(document.querySelectorAll('[data-icon]').length).toBeGreaterThan(0)
   })
 
+  it('keeps each desktop icon id intact inside Playable', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    // playhtml's HOC clobbered DesktopIcon's id with the Playable id
+    // ("icon-work") when it could not find a DOM element to attach to. With
+    // the anchor div in sync.tsx, the icon keeps its own id and its ref
+    // reaches playhtml, so icon positions sync like windows do.
+    for (const id of ['readme', 'work', 'art', 'me', 'contact']) {
+      expect(document.querySelector(`[data-icon="${id}"]`), id).not.toBeNull()
+    }
+    expect(document.querySelector('[data-icon^="icon-"]')).toBeNull()
+  })
+
   it('puts z-index on the wrapper outside the transform, ordered by open sequence', () => {
     setViewport(true)
     render(

@@ -34,7 +34,13 @@ const SharedPlayable = withSharedState(
   (props: PlayableProps) => ({ defaultData: IDENTITY_TRANSFORM, id: props.id }),
   ({ data, setData }: { data: Transform; setData: (t: Transform) => void }, props: PlayableProps) => (
     <PlayableSurface caps={props.caps} transform={data} onTransform={setData}>
-      {props.children}
+      {/* playhtml's HOC walks the React tree for the first DOM element and
+          clones its id and ref onto it. PlayableSurface is a component, so it
+          looks inside; if the child is also a component with no DOM child of
+          its own (DesktopIcon), it gives up and spreads those props onto the
+          component instead, clobbering its id and never attaching the ref, so
+          that element never syncs. This div is the guaranteed target. */}
+      <div data-play-anchor>{props.children}</div>
     </PlayableSurface>
   ),
 )
