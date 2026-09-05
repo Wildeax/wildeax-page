@@ -14,5 +14,8 @@ export default defineConfig({
     // jsdom is memory-hungry enough to fall over on a loaded machine.
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
+    // Polyfills PointerEvent and pointer capture, neither of which jsdom has.
+    // Harmless under the node environment, where window is undefined.
+    setupFiles: ['./src/test-setup.ts'],
   },
 })
