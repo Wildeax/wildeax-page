@@ -36,7 +36,7 @@ implementation, not open questions.
 `playhtml` or `@playhtml/react`. It exports exactly three things:
 
 ```ts
-export function PlayRoot(props: { children: ReactNode }): JSX.Element
+export function PlayRoot(props: { children: ReactNode; pathname: string }): JSX.Element
 export function Playable(props: { id: string; caps: Capability[]; children: ReactNode }): JSX.Element
 export function usePresence(): { count: number; myColor: string | undefined }
 ```
