@@ -24,7 +24,7 @@ implementation, not open questions.
 | Blast radius | The whole page is playable | Rejected: a contained playground section, and a separate `/play` route. The author accepted that the site becomes whatever the last visitor left it. |
 | On load | Played-with, permanent, manual reset | Rejected: decaying positions and a pinned snapshot. The author's words: "I'm more of let the chaos rain guy". |
 | Visitor input | Stickers only | No free text and no brush. An unmoderated public brush becomes phalluses within a day, and a text field becomes insults. Removing both inputs removes the moderation burden structurally rather than by filtering. |
-| Backend | playhtml hosted, behind a one-file seam | Rejected: a custom Durable Object now. The seam exists so a Durable Object can replace playhtml later without touching components. |
+| Backend | playhtml default host, behind a one-file seam | Rejected: a custom Durable Object now. `initOptions.host` allows self-hosting the PartyKit server later without code changes, and the seam allows replacing playhtml entirely. |
 | Effects | Cut to make room | Rejected: keeping every effect and disabling play on mobile. |
 | Mobile | Long-press to drag | Rejected: view-only phones and stickers-only phones. |
 
@@ -32,16 +32,27 @@ implementation, not open questions.
 
 ### The sync seam
 
-`src/play/sync.ts` is the only module in the repository that imports
+`src/play/sync.tsx` is the only module in the repository that imports
 `playhtml` or `@playhtml/react`. It exports exactly three things:
 
 ```ts
 export function PlayRoot(props: { children: ReactNode }): JSX.Element
-export function usePlayable(id: string, caps: Capability[]): PlayableProps
-export function usePresence(): { count: number; cursors: Cursor[] }
+export function Playable(props: { id: string; caps: Capability[]; children: ReactNode }): JSX.Element
+export function usePresence(): { count: number; myColor: string | undefined }
 ```
 
-`Capability` is `'move' | 'spin' | 'grow' | 'toggle' | 'duplicate'`.
+`Capability` is `'move' | 'spin' | 'grow'`.
+
+`Playable` is a component rather than a hook because `@playhtml/react` exposes
+`withSharedState`, a higher-order component, not a hook. Fighting that shape to
+present a hook would mean wrapping every element in an internal component
+anyway, so the seam matches the library.
+
+Drag is implemented on top of `withSharedState` rather than playhtml's built-in
+`can-move` attribute. `can-move` cannot express the 5px click threshold, the
+250ms touch long-press, or bounds clamping, all three of which this design
+requires. `withSharedState` stores `{ x, y, rotation, scale }` per element and
+the pointer handling is ours.
 
 Components import from `@/play`. No component imports playhtml directly. An
 ESLint `no-restricted-imports` rule enforces this, because a seam nobody
@@ -164,10 +175,13 @@ has no test runner today, so this adds Vitest.
 
 ## Risks
 
-**playhtml is beta software and its sync is hosted by its author.** Self-hosting
-is described as on the roadmap, meaning unavailable. If that service is
-withdrawn, the toy stops working. The failure behavior above means the site does
-not. The seam means replacing it is one file.
+**playhtml is beta software and the default sync runs on infrastructure the
+author operates.** Self-hosting the PartyKit server is supported today via
+`initOptions.host`; what is on the roadmap is a custom persistence backend, not
+self-hosting itself. So the escape hatch is real and cheap: point `host` at our
+own PartyKit deployment without touching component code. If the library itself
+is abandoned, the failure behavior above keeps the site working and the seam
+keeps the replacement to one file.
 
 **A permanent shared canvas on a professional domain will eventually be arranged
 into something the author dislikes.** Removing text and brush input removes the
