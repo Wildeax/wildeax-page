@@ -1,7 +1,7 @@
 # Shared play layer for wildeax.com
 
 Date: 2026-09-04
-Status: approved, not implemented
+Status: implemented on branch feat/shared-play-layer, pending two-browser verification
 
 ## What this is
 
@@ -58,7 +58,7 @@ Components import from `@/play`. No component imports playhtml directly. An
 ESLint `no-restricted-imports` rule enforces this, because a seam nobody
 enforces stops being a seam within two months.
 
-Replacing playhtml with a Durable Object means rewriting `sync.ts` and nothing
+Replacing playhtml with a Durable Object means rewriting `sync.tsx` and nothing
 else. That is the entire abstraction. No interface hierarchy, no adapter
 classes, no dependency injection.
 
@@ -124,7 +124,8 @@ authored layout and throws nothing. No spinner, no error banner, no
 "reconnecting" state. The play layer is strictly additive.
 
 Concretely: `PlayRoot` catches initialization failure and renders children
-unwrapped, and `usePlayable` returns inert props when there is no connection.
+unwrapped, and `Playable` falls back to an inert `PlayableSurface` with no
+capabilities when there is no connection.
 
 This is verified by a test that points the client at an unreachable room and
 asserts the page still renders its content.
