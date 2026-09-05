@@ -1,11 +1,16 @@
 // no default React import needed in React 17+ JSX runtime
+import { lazy, Suspense } from 'react'
 import { Navbar, Hero, Features, About, Contact, Footer } from '@/components'
 import { Routes, Route } from 'react-router-dom'
-import Links from '@/pages/Links'
 import BlobCursor from '@/reactbits/BlobCursor'
 import Aurora from '@/reactbits/Aurora'
 import Particles from '@/reactbits/Particles'
-import NotFound from '@/pages/NotFound'
+
+// Split out so `three` (AsciiCanvasText, used only by NotFound) and
+// `react-icons` (used only by Links) leave the main chunk. Both were being
+// downloaded by every visitor to the home page.
+const Links = lazy(() => import('@/pages/Links'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
 
 function App() {
   return (
@@ -29,22 +34,24 @@ function App() {
         {/* Hide theme toggle for now */}
       </Navbar>
 
-      <Routes>
-        <Route path="/" element={
-          <main>
-            <Hero />
-            <Features />
-            <About />
-            <Contact />
-          </main>
-        } />
-        <Route path="/links" element={
-          <div className="relative z-10">
-            <Links />
-          </div>
-        } />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={
+            <main>
+              <Hero />
+              <Features />
+              <About />
+              <Contact />
+            </main>
+          } />
+          <Route path="/links" element={
+            <div className="relative z-10">
+              <Links />
+            </div>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
 
       <Footer />
     </div>
