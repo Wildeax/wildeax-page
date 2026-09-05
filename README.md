@@ -77,3 +77,37 @@ This project is set up with:
 - Development-ready configuration
 
 Feel free to build upon this foundation!
+## The shared play layer
+
+Every visitor can drag, spin and scale the page's elements and place stickers,
+and that state is shared with everyone else and persists. Visitors also see each
+other's cursors. Design notes are in
+`docs/superpowers/specs/2026-09-04-shared-play-layer-design.md`.
+
+There is no admin UI and no moderation queue. Stickers come from a fixed palette
+and there is no text input anywhere in the feature, so the worst case is an
+arrangement you dislike rather than something written about you.
+
+### Resetting it
+
+Bump the room number in `src/play/room.ts`:
+
+```ts
+export const ROOM = 'wildeax-2'  // was wildeax-1
+```
+
+Then `npm run build && npx wrangler deploy`. The old room is abandoned rather
+than deleted, so the number only ever goes up.
+
+### Adding stickers
+
+Extend `STICKER_KINDS` in `src/play/stickers.ts`. Emoji use `glyph`, images use
+`src` and are imported from `src/assets/img/`.
+
+### Changing the sync backend
+
+`src/play/sync.tsx` is the only file allowed to import playhtml, enforced by a
+`no-restricted-imports` ESLint rule. Everything else imports from `@/play`.
+Self-hosting the PartyKit server is a one-line change to `initOptions.host` in
+that file; replacing playhtml entirely means rewriting that file and nothing
+else.

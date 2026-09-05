@@ -1,4 +1,5 @@
 import { useI18n } from '@/i18n'
+import { Playable } from '@/play'
 import ScrambledText from '@/reactbits/ScrambledText'
 
 const Contact = () => {
@@ -6,7 +7,9 @@ const Contact = () => {
   return (
     <section id="contact" className="relative py-16 md:py-20">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
-        <ScrambledText className="text-2xl font-bold text-zinc-100" duration={0.35} speed={0.7} triggerKey={version}>{t('contact.title')}</ScrambledText>
+        <Playable id="contact-title" caps={['move', 'spin']}>
+          <ScrambledText className="text-2xl font-bold text-zinc-100" duration={0.35} speed={0.7} triggerKey={version}>{t('contact.title')}</ScrambledText>
+        </Playable>
         <ScrambledText className="mt-2 text-zinc-400" duration={0.35} speed={0.7} triggerKey={version}>{t('contact.sub')}</ScrambledText>
 
         <div className="mt-8 space-y-3">

@@ -76,19 +76,15 @@ export default {
       return html
     }
 
-    // Long cache for non-HTML static assets. Vite fingerprints everything under
-    // /assets/, so only those are safe to freeze. Files copied from public/ keep
-    // their name across deploys, so og.png and logo.svg must stay revalidatable.
+    // Vite fingerprints everything under /assets/, so those files are safe to
+    // freeze forever: the name changes when the content does. The ASSETS
+    // binding sets "max-age=0, must-revalidate" on everything, so this must
+    // overwrite rather than fill in a missing header.
     const contentType = response.headers.get('content-type') || ''
     if (response.ok && !contentType.includes('text/html')) {
       const newHeaders = new Headers(response.headers)
-      if (!newHeaders.has('cache-control')) {
-        newHeaders.set(
-          'cache-control',
-          url.pathname.startsWith('/assets/')
-            ? 'public, max-age=31536000, immutable'
-            : 'public, max-age=3600, must-revalidate'
-        )
+      if (url.pathname.startsWith('/assets/')) {
+        newHeaders.set('cache-control', 'public, max-age=31536000, immutable')
       }
       return new Response(response.body, { status: response.status, headers: newHeaders })
     }
