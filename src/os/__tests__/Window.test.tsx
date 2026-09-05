@@ -9,7 +9,7 @@ afterEach(cleanup)
 describe('Window', () => {
   it('renders its title and body', () => {
     render(
-      <Window id="readme" title="readme.txt" zIndex={10} hidden={false} onClose={() => {}} onFocus={() => {}}>
+      <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={() => {}}>
         <p>hello</p>
       </Window>,
     )
@@ -19,7 +19,7 @@ describe('Window', () => {
 
   it('is a labelled dialog for screen readers', () => {
     render(
-      <Window id="readme" title="readme.txt" zIndex={10} hidden={false} onClose={() => {}} onFocus={() => {}}>
+      <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={() => {}}>
         <p>hello</p>
       </Window>,
     )
@@ -29,7 +29,7 @@ describe('Window', () => {
   it('calls onClose when the close control is used', () => {
     const onClose = vi.fn()
     render(
-      <Window id="readme" title="readme.txt" zIndex={10} hidden={false} onClose={onClose} onFocus={() => {}}>
+      <Window id="readme" title="readme.txt" hidden={false} onClose={onClose} onFocus={() => {}}>
         <p>hello</p>
       </Window>,
     )
@@ -40,7 +40,7 @@ describe('Window', () => {
   it('closes on Escape', () => {
     const onClose = vi.fn()
     render(
-      <Window id="readme" title="readme.txt" zIndex={10} hidden={false} onClose={onClose} onFocus={() => {}}>
+      <Window id="readme" title="readme.txt" hidden={false} onClose={onClose} onFocus={() => {}}>
         <p>hello</p>
       </Window>,
     )
@@ -51,7 +51,7 @@ describe('Window', () => {
   it('focuses when the body is clicked', () => {
     const onFocus = vi.fn()
     render(
-      <Window id="readme" title="readme.txt" zIndex={10} hidden={false} onClose={() => {}} onFocus={onFocus}>
+      <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={onFocus}>
         <p>hello</p>
       </Window>,
     )
@@ -61,7 +61,7 @@ describe('Window', () => {
 
   it('stays in the DOM when hidden, so crawlers still read it', () => {
     render(
-      <Window id="readme" title="readme.txt" zIndex={-1} hidden onClose={() => {}} onFocus={() => {}}>
+      <Window id="readme" title="readme.txt" hidden onClose={() => {}} onFocus={() => {}}>
         <p>indexable</p>
       </Window>,
     )

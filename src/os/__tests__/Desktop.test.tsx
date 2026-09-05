@@ -4,6 +4,7 @@ import { render, screen, cleanup } from '@testing-library/react'
 import { I18nProvider } from '@/i18n'
 import { Desktop } from '@/os/Desktop'
 import { WINDOWS } from '@/os/registry'
+import { Z_BASE } from '@/os/windowState'
 
 afterEach(cleanup)
 
@@ -47,6 +48,25 @@ describe('Desktop at desktop widths', () => {
     )
     expect(document.querySelector('[data-taskbar]')).not.toBeNull()
     expect(document.querySelectorAll('[data-icon]').length).toBeGreaterThan(0)
+  })
+
+  it('puts z-index on the wrapper outside the transform, ordered by open sequence', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    // PlayableSurface always carries a transform, which is its own stacking
+    // context. A z-index inside it cannot order one window over another, so the
+    // wrapper above the surface must own it. readme, work, me open in that
+    // order, so me is topmost.
+    const wrapperOf = (id: string) =>
+      document.querySelector(`[data-window="${id}"]`)!.closest('.absolute') as HTMLElement
+    expect(wrapperOf('readme').style.zIndex).toBe(String(Z_BASE))
+    expect(wrapperOf('work').style.zIndex).toBe(String(Z_BASE + 1))
+    expect(wrapperOf('me').style.zIndex).toBe(String(Z_BASE + 2))
+    expect(wrapperOf('art').style.zIndex).toBe('')
   })
 
   it('keeps closed windows in the DOM so crawlers read them', () => {

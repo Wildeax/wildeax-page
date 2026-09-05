@@ -50,7 +50,6 @@ export function Desktop() {
             <Window
               id={w.id}
               title={t(w.titleKey)}
-              zIndex={0}
               hidden={false}
               onClose={() => {}}
               onFocus={() => {}}
@@ -82,13 +81,19 @@ export function Desktop() {
       {WINDOWS.map((w) => {
         const shown = isOpen(state, w.id)
         return (
-          <div key={w.id} className="absolute" style={{ left: w.x, top: w.y }}>
+          // z-index lives here, on the wrapper OUTSIDE PlayableSurface. The
+          // surface always has a transform, which is its own stacking context,
+          // so a z-index inside it can never order one window over another.
+          <div
+            key={w.id}
+            className="absolute"
+            style={{ left: w.x, top: w.y, zIndex: shown ? zIndexOf(state, w.id) : undefined }}
+          >
             <Playable id={`win-${w.id}`} caps={['move']}>
               <div style={{ width: w.width, height: w.height }}>
                 <Window
                   id={w.id}
                   title={t(w.titleKey)}
-                  zIndex={zIndexOf(state, w.id)}
                   hidden={!shown}
                   onClose={() => close(w.id)}
                   onFocus={() => focus(w.id)}
