@@ -1,11 +1,13 @@
 import SpotlightCard from '@/reactbits/SpotlightCard'
 import { useI18n } from '@/i18n'
+import { Playable } from '@/play'
 import ScrambledText from '@/reactbits/ScrambledText'
 
 const Features = () => {
   const { t, version } = useI18n()
   const features = [
   {
+    id: 'generalist',
     title: t('features.generalist.title'),
     desc: t('features.generalist.desc'),
     icon: (
@@ -15,6 +17,7 @@ const Features = () => {
     )
   },
   {
+    id: 'graphics',
     title: t('features.graphics.title'),
     desc: t('features.graphics.desc'),
     icon: (
@@ -24,6 +27,7 @@ const Features = () => {
     )
   },
   {
+    id: 'arch',
     title: t('features.arch.title'),
     desc: t('features.arch.desc'),
     icon: (
@@ -33,6 +37,7 @@ const Features = () => {
     )
   },
   {
+    id: 'educator',
     title: t('features.educator.title'),
     desc: t('features.educator.desc'),
     icon: (
@@ -49,15 +54,17 @@ const Features = () => {
         <ScrambledText className="mt-2 text-zinc-400" duration={0.35} speed={0.7} triggerKey={version}>{t('features.sub')}</ScrambledText>
         <div className="mt-8 md:mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
           {features.map((f) => (
-            <SpotlightCard key={f.title}>
-              <div className="flex items-start gap-3">
-                {f.icon}
-                <div>
-                  <ScrambledText as="h3" className="font-semibold text-zinc-100" duration={0.35} speed={0.7} triggerKey={version}>{f.title}</ScrambledText>
-                  <ScrambledText as="p" className="mt-1 text-sm text-zinc-400" duration={0.35} speed={0.7} triggerKey={version}>{f.desc}</ScrambledText>
+            <Playable key={f.id} id={`feature-${f.id}`} caps={['move', 'spin', 'grow']}>
+              <SpotlightCard>
+                <div className="flex items-start gap-3">
+                  {f.icon}
+                  <div>
+                    <ScrambledText as="h3" className="font-semibold text-zinc-100" duration={0.35} speed={0.7} triggerKey={version}>{f.title}</ScrambledText>
+                    <ScrambledText as="p" className="mt-1 text-sm text-zinc-400" duration={0.35} speed={0.7} triggerKey={version}>{f.desc}</ScrambledText>
+                  </div>
                 </div>
-              </div>
-            </SpotlightCard>
+              </SpotlightCard>
+            </Playable>
           ))}
         </div>
       </div>

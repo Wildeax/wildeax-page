@@ -1,3 +1,9 @@
+/* eslint-disable react-refresh/only-export-components --
+ * This file deliberately exports both components (PlayRoot, Playable) and hooks
+ * (usePresence, useSharedList). Splitting them would mean two files importing
+ * playhtml, which is the one thing this seam exists to prevent. The cost is
+ * losing Fast Refresh for this file during development, which is worth it.
+ */
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { PlayProvider, usePageData, usePlayContext, useUsers, withSharedState } from '@playhtml/react'

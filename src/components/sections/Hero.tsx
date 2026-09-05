@@ -1,6 +1,7 @@
 import SpotlightCard from '@/reactbits/SpotlightCard'
 import TextPressure from '@/reactbits/TextPressure'
 import { useI18n } from '@/i18n'
+import { Playable } from '@/play'
 import ScrambledText from '@/reactbits/ScrambledText'
 
 const Hero = () => {
@@ -9,25 +10,29 @@ const Hero = () => {
     <section id="home" className="relative py-16 md:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-10 md:gap-12 items-center">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
-            <span className="h-2 w-2 rounded-full bg-brand-400 animate-pulse" />
-            <ScrambledText as="span" duration={0.35} speed={0.7} triggerKey={version}>{t('hero.badge')}</ScrambledText>
-          </div>
-          <div className="relative mt-6 h-[96px] sm:h-[120px] md:h-[180px] z-50 overflow-hidden">
-            <TextPressure
-              text="Wildeax"
-              className="w-full"
-              textColor="#e6fbff"
-              stroke={false}
-              scale={false}
-              minFontSize={36}
-              flex={false}
-              width={false}
-              italic={false}
-              weight={true}
-              alpha={false}
-            />
-          </div>
+          <Playable id="hero-badge" caps={['move', 'spin']}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-300">
+              <span className="h-2 w-2 rounded-full bg-brand-400 animate-pulse" />
+              <ScrambledText as="span" duration={0.35} speed={0.7} triggerKey={version}>{t('hero.badge')}</ScrambledText>
+            </div>
+          </Playable>
+          <Playable id="hero-wordmark" caps={['move', 'spin']}>
+            <div className="relative mt-6 h-[96px] sm:h-[120px] md:h-[180px] z-50 overflow-hidden">
+              <TextPressure
+                text="Wildeax"
+                className="w-full"
+                textColor="#e6fbff"
+                stroke={false}
+                scale={false}
+                minFontSize={36}
+                flex={false}
+                width={false}
+                italic={false}
+                weight={true}
+                alpha={false}
+              />
+            </div>
+          </Playable>
           <ScrambledText className="mt-4 text-zinc-400 max-w-xl leading-relaxed" duration={0.4} speed={0.7} triggerKey={version}>
             {t('hero.tagline')}
           </ScrambledText>
@@ -53,14 +58,16 @@ const Hero = () => {
         </div>
 
         <div className="relative mt-8 md:mt-0">
-          <SpotlightCard>
-            <ScrambledText as="h3" className="text-lg font-semibold text-zinc-100" duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.title')}</ScrambledText>
-            <div className="mt-3 space-y-2 text-sm text-zinc-300">
-              <ScrambledText duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.point1')}</ScrambledText>
-              <ScrambledText duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.point2')}</ScrambledText>
-              <ScrambledText duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.point3')}</ScrambledText>
-            </div>
-          </SpotlightCard>
+          <Playable id="hero-ethos" caps={['move', 'spin', 'grow']}>
+            <SpotlightCard>
+              <ScrambledText as="h3" className="text-lg font-semibold text-zinc-100" duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.title')}</ScrambledText>
+              <div className="mt-3 space-y-2 text-sm text-zinc-300">
+                <ScrambledText duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.point1')}</ScrambledText>
+                <ScrambledText duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.point2')}</ScrambledText>
+                <ScrambledText duration={0.35} speed={0.7} triggerKey={version}>{t('ethos.point3')}</ScrambledText>
+              </div>
+            </SpotlightCard>
+          </Playable>
         </div>
       </div>
     </section>
