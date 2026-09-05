@@ -13,6 +13,27 @@ describe('WINDOWS', () => {
     expect(WINDOWS.filter((w) => w.openOnLoad).map((w) => w.id)).toEqual(['readme', 'work', 'me'])
   })
 
+  it('authors every window clear of the icon column and inside a 1280x720 desktop', () => {
+    const ICON_COLUMN = 120
+    const TASKBAR = 44
+    for (const w of WINDOWS) {
+      expect(w.x, `${w.id} overlaps the icon column`).toBeGreaterThanOrEqual(ICON_COLUMN)
+      expect(w.x + w.width, `${w.id} runs off the right`).toBeLessThanOrEqual(1280)
+      expect(w.y + w.height, `${w.id} sits under the taskbar`).toBeLessThanOrEqual(720 - TASKBAR)
+    }
+  })
+
+  it('does not overlap the windows that open on load', () => {
+    const open = WINDOWS.filter((w) => w.openOnLoad)
+    for (const a of open) {
+      for (const b of open) {
+        if (a.id >= b.id) continue
+        const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y
+        expect(apart, `${a.id} overlaps ${b.id} on load`).toBe(true)
+      }
+    }
+  })
+
   it('gives every window a positive size', () => {
     for (const w of WINDOWS) {
       expect(w.width).toBeGreaterThan(0)

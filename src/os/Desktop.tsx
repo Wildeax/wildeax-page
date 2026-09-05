@@ -9,7 +9,7 @@ import { DESKTOP_ICON_IDS, WINDOWS } from '@/os/registry'
 import { PROJECTS } from '@/os/projects'
 import { initialOsState, isMinimized, isVisible, osReducer, zIndexOf } from '@/os/windowState'
 import { useIsDesktop } from '@/os/useIsDesktop'
-import type { WindowId } from '@/os/types'
+import type { WindowDef, WindowId } from '@/os/types'
 import { ArtWindow } from '@/os/content/ArtWindow'
 import { ContactWindow } from '@/os/content/ContactWindow'
 import { MeWindow } from '@/os/content/MeWindow'
@@ -55,6 +55,26 @@ function dockOffset(id: WindowId): { dx: number; dy: number } {
   return {
     dx: task.left + task.width / 2 - (win.left + win.width / 2),
     dy: task.top + task.height / 2 - (win.top + win.height / 2),
+  }
+}
+
+/** left-3 + w-24 on the icon list, plus a gutter. */
+const ICON_COLUMN_WIDTH = 120
+const TASKBAR_HEIGHT = 44
+
+/**
+ * Authored positions are tuned for 1280x720 and up. On anything smaller, pull
+ * a window back inside the viewport rather than let it start behind the
+ * taskbar or off the right edge. Only the authored anchor moves; the shared
+ * drag offset from Playable sits on top of it unchanged.
+ */
+function placeWithinViewport(w: WindowDef): { left: number; top: number } {
+  if (typeof window === 'undefined') return { left: w.x, top: w.y }
+  const maxLeft = window.innerWidth - w.width - 8
+  const maxTop = window.innerHeight - TASKBAR_HEIGHT - w.height - 8
+  return {
+    left: Math.max(ICON_COLUMN_WIDTH, Math.min(w.x, maxLeft)),
+    top: Math.max(8, Math.min(w.y, maxTop)),
   }
 }
 
@@ -185,9 +205,10 @@ export function Desktop() {
         // surface always has a transform, which is its own stacking context,
         // so a z-index inside it can never order one window over another.
         // The flight animation lives here too, for the same reason.
+        const anchor = placeWithinViewport(w)
         const style: CSSProperties & Record<`--${string}`, string> = {
-          left: w.x,
-          top: w.y,
+          left: anchor.left,
+          top: anchor.top,
           zIndex: shown ? zIndexOf(state, w.id) : undefined,
           // visibility rather than display: the sizing div inside keeps its
           // explicit width and height, so dockOffset can still measure where a
