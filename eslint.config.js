@@ -20,4 +20,25 @@ export default tseslint.config([
       globals: globals.browser,
     },
   },
+  {
+    // src/play/sync.tsx is the seam over playhtml. A seam nobody enforces stops
+    // being a seam within two months, at which point swapping the backend means
+    // touching every component instead of one file.
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['src/play/sync.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [
+          {
+            name: 'playhtml',
+            message: 'Import from @/play instead. Only src/play/sync.tsx may import playhtml.',
+          },
+          {
+            name: '@playhtml/react',
+            message: 'Import from @/play instead. Only src/play/sync.tsx may import playhtml.',
+          },
+        ],
+      }],
+    },
+  },
 ])
