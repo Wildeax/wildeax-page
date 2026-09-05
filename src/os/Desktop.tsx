@@ -189,6 +189,11 @@ export function Desktop() {
           left: w.x,
           top: w.y,
           zIndex: shown ? zIndexOf(state, w.id) : undefined,
+          // visibility rather than display: the sizing div inside keeps its
+          // explicit width and height, so dockOffset can still measure where a
+          // restore flight starts, while nothing paints and nothing intercepts
+          // a pointer meant for the wallpaper behind it.
+          visibility: shown ? undefined : 'hidden',
           '--dock-dx': `${inFlight?.dx ?? 0}px`,
           '--dock-dy': `${inFlight?.dy ?? 0}px`,
         }

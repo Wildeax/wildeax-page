@@ -94,7 +94,21 @@ describe('Window', () => {
     )
     const el = screen.getByText('indexable')
     expect(el).toBeTruthy()
-    expect(el.closest('[hidden]')).not.toBeNull()
+    const dialog = el.closest('[hidden]') as HTMLElement | null
+    expect(dialog).not.toBeNull()
+    // The attribute alone is not enough: Tailwind's .flex class outranked
+    // [hidden]{display:none} and every closed window was drawn. The inline
+    // style is what actually hides it.
+    expect(dialog?.style.display).toBe('none')
+  })
+
+  it('does not force display when visible, so the flex layout applies', () => {
+    render(
+      <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={() => {}}>
+        <p>shown</p>
+      </Window>,
+    )
+    expect((screen.getByRole('dialog') as HTMLElement).style.display).toBe('')
   })
 })
 

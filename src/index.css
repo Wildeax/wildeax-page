@@ -16,16 +16,18 @@
     opacity: 1;
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
-  /* Pinch at the waist first, so it reads as being sucked rather than shrunk. */
+  /* Pinch at the waist first, so it reads as being sucked rather than shrunk.
+     The narrow end of the funnel is the bottom: that is the side facing the
+     taskbar it is being pulled into. */
   30% {
     transform: translate(0, 0) scale(0.9, 1.03);
     opacity: 1;
-    clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
+    clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
   }
   100% {
     transform: translate(var(--dock-dx, 0px), var(--dock-dy, 60vh)) scale(0.06, 0.03);
     opacity: 0;
-    clip-path: polygon(45% 0, 55% 0, 100% 100%, 0 100%);
+    clip-path: polygon(0 0, 100% 0, 55% 100%, 45% 100%);
   }
 }
 
@@ -61,12 +63,12 @@
 
 .os-flight-minimize {
   animation: os-minimize 440ms cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
-  transform-origin: 50% 100%;
+  transform-origin: 50% 50%;
 }
 
 .os-flight-restore {
   animation: os-minimize 400ms cubic-bezier(0.1, 0.6, 0.3, 1) reverse both;
-  transform-origin: 50% 100%;
+  transform-origin: 50% 50%;
 }
 
 .os-flight-close {

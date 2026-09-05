@@ -27,6 +27,11 @@ export function Window({ id, title, hidden, onClose, onFocus, onMinimize, childr
       tabIndex={-1}
       onKeyDown={onKeyDown}
       onMouseDown={onFocus}
+      // The hidden attribute alone does not work here. Tailwind preflight's
+      // [hidden]{display:none} and the .flex class below have equal specificity
+      // and .flex comes later, so it won, and every closed window was drawn.
+      // An inline style outranks both.
+      style={{ display: hidden ? 'none' : undefined }}
       className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-brand-400/30 bg-[#0b0e12]/95 shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_18px_48px_rgba(0,0,0,0.6)] backdrop-blur"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-brand-400/25 bg-gradient-to-r from-brand-400/15 to-violet-500/15 px-3 py-1.5">

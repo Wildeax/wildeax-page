@@ -72,6 +72,22 @@ describe('Desktop at desktop widths', () => {
     expect(wrapperOf('art').style.zIndex).toBe('')
   })
 
+  it('makes closed wrappers invisible and non-interactive while open ones paint', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    const wrapper = (id: string) => document.querySelector(`[data-win-wrapper="${id}"]`) as HTMLElement
+    // Open on load.
+    expect(wrapper('readme').style.visibility).toBe('')
+    // Closed: visibility rather than display, so the rect survives for the
+    // restore flight while nothing paints or catches a pointer.
+    expect(wrapper('art').style.visibility).toBe('hidden')
+    expect(wrapper('pos').style.visibility).toBe('hidden')
+  })
+
   it('hides a minimized window only after its flight ends, and flights do not cancel each other', () => {
     setViewport(true)
     render(
