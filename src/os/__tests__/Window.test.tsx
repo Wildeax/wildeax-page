@@ -37,6 +37,33 @@ describe('Window', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('calls onMinimize when the minimize control is used', () => {
+    const onMinimize = vi.fn()
+    render(
+      <Window
+        id="readme"
+        title="readme.txt"
+        hidden={false}
+        onClose={() => {}}
+        onFocus={() => {}}
+        onMinimize={onMinimize}
+      >
+        <p>hello</p>
+      </Window>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /minimize/i }))
+    expect(onMinimize).toHaveBeenCalledTimes(1)
+  })
+
+  it('has no minimize control when none is offered, as on mobile', () => {
+    render(
+      <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={() => {}}>
+        <p>hello</p>
+      </Window>,
+    )
+    expect(screen.queryByRole('button', { name: /minimize/i })).toBeNull()
+  })
+
   it('closes on Escape', () => {
     const onClose = vi.fn()
     render(
@@ -77,5 +104,11 @@ describe('DesktopIcon', () => {
     render(<DesktopIcon id="art" label="art" glyph="🎨" onOpen={onOpen} />)
     fireEvent.click(screen.getByRole('button', { name: /art/ }))
     expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('prefers a real image over the glyph when given one', () => {
+    render(<DesktopIcon id="me" label="me.jpg" glyph="🖼️" iconSrc="/me.jpg" onOpen={() => {}} />)
+    expect(document.querySelector('[data-icon="me"] img')).not.toBeNull()
+    expect(screen.queryByText('🖼️')).toBeNull()
   })
 })

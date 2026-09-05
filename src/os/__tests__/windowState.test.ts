@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { initialOsState, osReducer, zIndexOf, isOpen, Z_BASE } from '@/os/windowState'
+import {
+  initialOsState,
+  osReducer,
+  zIndexOf,
+  isOpen,
+  isMinimized,
+  isVisible,
+  Z_BASE,
+} from '@/os/windowState'
 import type { WindowDef } from '@/os/types'
 
 const defs: WindowDef[] = [
@@ -11,6 +19,10 @@ const defs: WindowDef[] = [
 describe('initialOsState', () => {
   it('opens only the windows flagged openOnLoad, in registry order', () => {
     expect(initialOsState(defs).open).toEqual(['readme', 'work'])
+  })
+
+  it('starts with nothing minimized', () => {
+    expect(initialOsState(defs).minimized).toEqual([])
   })
 })
 
@@ -55,6 +67,58 @@ describe('osReducer', () => {
     const before = initialOsState(defs)
     osReducer(before, { type: 'open', id: 'art' })
     expect(before.open).toEqual(['readme', 'work'])
+  })
+})
+
+describe('minimize and restore', () => {
+  it('keeps a minimized window in open, so its taskbar entry and z-slot survive', () => {
+    const s = osReducer(initialOsState(defs), { type: 'minimize', id: 'readme' })
+    expect(s.open).toEqual(['readme', 'work'])
+    expect(s.minimized).toEqual(['readme'])
+    expect(isVisible(s, 'readme')).toBe(false)
+    expect(isOpen(s, 'readme')).toBe(true)
+  })
+
+  it('ignores minimizing a closed window', () => {
+    const before = initialOsState(defs)
+    expect(osReducer(before, { type: 'minimize', id: 'art' })).toBe(before)
+  })
+
+  it('does not double-minimize', () => {
+    const once = osReducer(initialOsState(defs), { type: 'minimize', id: 'readme' })
+    expect(osReducer(once, { type: 'minimize', id: 'readme' })).toBe(once)
+  })
+
+  it('restore un-minimizes and raises', () => {
+    const min = osReducer(initialOsState(defs), { type: 'minimize', id: 'readme' })
+    const s = osReducer(min, { type: 'restore', id: 'readme' })
+    expect(s.minimized).toEqual([])
+    expect(s.open).toEqual(['work', 'readme'])
+    expect(isVisible(s, 'readme')).toBe(true)
+  })
+
+  it('ignores restoring something that is not minimized', () => {
+    const before = initialOsState(defs)
+    expect(osReducer(before, { type: 'restore', id: 'readme' })).toBe(before)
+  })
+
+  it('does not focus a minimized window; restore is the verb for that', () => {
+    const min = osReducer(initialOsState(defs), { type: 'minimize', id: 'readme' })
+    expect(osReducer(min, { type: 'focus', id: 'readme' })).toBe(min)
+  })
+
+  it('open on a minimized window restores it', () => {
+    const min = osReducer(initialOsState(defs), { type: 'minimize', id: 'readme' })
+    const s = osReducer(min, { type: 'open', id: 'readme' })
+    expect(isMinimized(s, 'readme')).toBe(false)
+    expect(s.open[s.open.length - 1]).toBe('readme')
+  })
+
+  it('close clears minimized too', () => {
+    const min = osReducer(initialOsState(defs), { type: 'minimize', id: 'readme' })
+    const s = osReducer(min, { type: 'close', id: 'readme' })
+    expect(s.open).toEqual(['work'])
+    expect(s.minimized).toEqual([])
   })
 })
 

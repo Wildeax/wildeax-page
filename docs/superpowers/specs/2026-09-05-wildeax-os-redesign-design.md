@@ -36,7 +36,7 @@ Settled during brainstorming. Constraints, not open questions.
 | OS flavour | A fictional OS, "WILDEAX OS" | Rejected: faithful Windows 98 and classic Mac System 7. Both are someone else's design language, both fight the cyberpunk palette, and a Win98 dev portfolio is now its own small genre. |
 | Scroll model | Viewport-locked desktop, windows scroll internally | Rejected: a scrolling page with window-styled sections, which demotes the desktop to decoration. |
 | Mobile | Stacked full-width cards, no dragging | Rejected: a pannable desktop, which is faithful and unusable at 390px. |
-| Window state | Positions shared, open/closed and z-order per visitor | Rejected: fully shared, which lets one visitor close every window and leave the site blank for everyone until the author notices. Also rejected: fully private, which discards the multiplayer layer. |
+| Window state | Positions shared; open/closed, minimized and z-order per visitor | Rejected: fully shared, which lets one visitor close every window and leave the site blank for everyone until the author notices. Also rejected: fully private, which discards the multiplayer layer. |
 | Artwork | Real section, placeholder tiles at first | Rejected: art as texture only, and linking Instagram instead. A creative-identity site for a digital artist has to show artwork. |
 
 ## Architecture
@@ -74,10 +74,23 @@ Title bar carries the title and a close control. The body scrolls internally
 with `overflow-y: auto`. Window size is fixed per window and declared in the
 registry below.
 
-**No minimize, and no resize, in v1.** Minimize would need a third state
-distinct from open and closed, and with the taskbar able to reopen a closed
-window it buys nothing a close does not. Resize implies persisting size, which
-doubles the shared-state surface for a page whose windows have fixed content.
+**Minimize is in; resize is not.** The first draft cut minimize as YAGNI. The
+author asked for it, with a macOS-style suck-into-the-dock animation, within an
+hour of seeing the preview, which is the signal YAGNI waits for. It is a third
+per-visitor state: a minimized window stays in `open`, so it keeps its taskbar
+entry and z-slot, and is simply not drawn. Restore raises it.
+
+Resize stays out. It implies persisting size, which doubles the shared-state
+surface for a page whose windows have fixed content.
+
+**Flights.** Minimize, restore, close and open each animate. Minimize pinches at
+the waist then accelerates toward its own taskbar button while collapsing, with
+a `clip-path` funnel so the top corners are pulled in ahead of the bottom;
+restore is the same animation reversed. The state change is dispatched on
+`animationend`, so a minimized window is hidden only once it has visibly gone.
+This is a CSS approximation, not a mesh warp: the real macOS genie effect needs
+WebGL and is not worth it for a title-bar button. Under `prefers-reduced-motion`
+there are no flights and state flips directly.
 
 ### State model
 
@@ -211,7 +224,7 @@ per file, as established in `vitest.config.ts`.
 
 ## Out of scope
 
-- Window resizing and minimizing, and any persistence of window size.
+- Window resizing, and any persistence of window size.
 - Real artwork. Placeholder tiles ship; images come later.
 - A start menu with nested items. The taskbar button opens the same icon list.
 - Sound.

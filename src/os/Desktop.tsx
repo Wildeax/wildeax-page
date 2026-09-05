@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useReducer } from 'react'
-import type { ReactNode } from 'react'
+import { useReducer, useState } from 'react'
+import type { AnimationEvent, CSSProperties, ReactNode } from 'react'
 import { useI18n } from '@/i18n'
 import { Playable } from '@/play'
 import { DesktopIcon } from '@/os/DesktopIcon'
@@ -7,7 +7,7 @@ import { Taskbar } from '@/os/Taskbar'
 import { Window } from '@/os/Window'
 import { DESKTOP_ICON_IDS, WINDOWS } from '@/os/registry'
 import { PROJECTS } from '@/os/projects'
-import { initialOsState, isOpen, osReducer, zIndexOf } from '@/os/windowState'
+import { initialOsState, isMinimized, isVisible, osReducer, zIndexOf } from '@/os/windowState'
 import { useIsDesktop } from '@/os/useIsDesktop'
 import type { WindowId } from '@/os/types'
 import { ArtWindow } from '@/os/content/ArtWindow'
@@ -17,26 +17,109 @@ import { ProjectWindow } from '@/os/content/ProjectWindow'
 import { ReadmeWindow } from '@/os/content/ReadmeWindow'
 import { WorkWindow } from '@/os/content/WorkWindow'
 
+type FlightKind = 'open' | 'close' | 'minimize' | 'restore'
+
+/**
+ * The one window mid-animation. The state change it represents is dispatched
+ * on animationend, so a minimized window is only hidden once it has visibly
+ * gone, and a restored one is visible for the whole of its return.
+ */
+interface Flight {
+  id: WindowId
+  kind: FlightKind
+  dx: number
+  dy: number
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+/**
+ * Offset from a window's centre to its taskbar button's centre. Measured on
+ * the wrapper rather than the dialog, because the wrapper keeps its size while
+ * the dialog inside is hidden, which is exactly when a restore needs it.
+ */
+function dockOffset(id: WindowId): { dx: number; dy: number } {
+  const win = document.querySelector(`[data-win-wrapper="${id}"]`)?.getBoundingClientRect()
+  const task = document.querySelector(`[data-task="${id}"]`)?.getBoundingClientRect()
+  if (!win || !task) return { dx: 0, dy: window.innerHeight }
+  return {
+    dx: task.left + task.width / 2 - (win.left + win.width / 2),
+    dy: task.top + task.height / 2 - (win.top + win.height / 2),
+  }
+}
+
+function bodyFor(id: WindowId, openWindow: (id: WindowId) => void): ReactNode {
+  switch (id) {
+    case 'readme':
+      return <ReadmeWindow />
+    case 'work':
+      return <WorkWindow onOpen={openWindow} />
+    case 'art':
+      return <ArtWindow />
+    case 'me':
+      return <MeWindow />
+    case 'contact':
+      return <ContactWindow />
+    default: {
+      const project = PROJECTS.find((p) => p.id === id)
+      return project ? <ProjectWindow project={project} /> : null
+    }
+  }
+}
+
 export function Desktop() {
   const { t } = useI18n()
   const isDesktop = useIsDesktop()
   const [state, dispatch] = useReducer(osReducer, WINDOWS, initialOsState)
+  const [flight, setFlight] = useState<Flight | null>(null)
+  const reduced = prefersReducedMotion()
 
-  const open = useCallback((id: WindowId) => dispatch({ type: 'open', id }), [])
-  const close = useCallback((id: WindowId) => dispatch({ type: 'close', id }), [])
-  const focus = useCallback((id: WindowId) => dispatch({ type: 'focus', id }), [])
+  function restoreWindow(id: WindowId) {
+    // Measure before dispatch: the wrapper has a rect while hidden, and this
+    // is where the reverse flight starts from.
+    const off = dockOffset(id)
+    dispatch({ type: 'restore', id })
+    if (!reduced) setFlight({ id, kind: 'restore', ...off })
+  }
 
-  const bodies = useMemo(() => {
-    const map = new Map<WindowId, ReactNode>([
-      ['readme', <ReadmeWindow key="readme" />],
-      ['work', <WorkWindow key="work" onOpen={open} />],
-      ['art', <ArtWindow key="art" />],
-      ['me', <MeWindow key="me" />],
-      ['contact', <ContactWindow key="contact" />],
-    ])
-    for (const p of PROJECTS) map.set(p.id, <ProjectWindow key={p.id} project={p} />)
-    return map
-  }, [open])
+  function openWindow(id: WindowId) {
+    if (isMinimized(state, id)) return restoreWindow(id)
+    const wasVisible = isVisible(state, id)
+    dispatch({ type: 'open', id })
+    if (!wasVisible && !reduced) setFlight({ id, kind: 'open', dx: 0, dy: 0 })
+  }
+
+  function closeWindow(id: WindowId) {
+    if (reduced) return dispatch({ type: 'close', id })
+    setFlight({ id, kind: 'close', dx: 0, dy: 0 })
+  }
+
+  function minimizeWindow(id: WindowId) {
+    if (reduced) return dispatch({ type: 'minimize', id })
+    setFlight({ id, kind: 'minimize', ...dockOffset(id) })
+  }
+
+  function selectTask(id: WindowId) {
+    if (isMinimized(state, id)) restoreWindow(id)
+    else dispatch({ type: 'focus', id })
+  }
+
+  function onFlightEnd(id: WindowId) {
+    return (e: AnimationEvent<HTMLDivElement>) => {
+      // Children may animate too; only the wrapper's own animation counts.
+      if (e.target !== e.currentTarget) return
+      if (!flight || flight.id !== id) return
+      if (flight.kind === 'minimize') dispatch({ type: 'minimize', id })
+      if (flight.kind === 'close') dispatch({ type: 'close', id })
+      setFlight(null)
+    }
+  }
 
   // On mobile every window is already expanded, so WorkWindow's row buttons
   // dispatch an open for something already visible. Harmless, and cheaper than
@@ -47,14 +130,8 @@ export function Desktop() {
         <MobileHeader />
         {WINDOWS.map((w) => (
           <div key={w.id} className="h-[min(70vh,520px)]">
-            <Window
-              id={w.id}
-              title={t(w.titleKey)}
-              hidden={false}
-              onClose={() => {}}
-              onFocus={() => {}}
-            >
-              {bodies.get(w.id)}
+            <Window id={w.id} title={t(w.titleKey)} hidden={false} onClose={() => {}} onFocus={() => {}}>
+              {bodyFor(w.id, openWindow)}
             </Window>
           </div>
         ))}
@@ -71,7 +148,13 @@ export function Desktop() {
           return (
             <li key={id}>
               <Playable id={`icon-${id}`} caps={['move']}>
-                <DesktopIcon id={id} label={t(def.titleKey)} glyph={def.glyph} onOpen={() => open(id)} />
+                <DesktopIcon
+                  id={id}
+                  label={t(def.titleKey)}
+                  glyph={def.glyph}
+                  iconSrc={def.iconSrc}
+                  onOpen={() => openWindow(id)}
+                />
               </Playable>
             </li>
           )
@@ -79,15 +162,26 @@ export function Desktop() {
       </ul>
 
       {WINDOWS.map((w) => {
-        const shown = isOpen(state, w.id)
+        const shown = isVisible(state, w.id)
+        const inFlight = flight?.id === w.id ? flight : null
+        // z-index lives here, on the wrapper OUTSIDE PlayableSurface. The
+        // surface always has a transform, which is its own stacking context,
+        // so a z-index inside it can never order one window over another.
+        // The flight animation lives here too, for the same reason.
+        const style: CSSProperties & Record<`--${string}`, string> = {
+          left: w.x,
+          top: w.y,
+          zIndex: shown ? zIndexOf(state, w.id) : undefined,
+          '--dock-dx': `${inFlight?.dx ?? 0}px`,
+          '--dock-dy': `${inFlight?.dy ?? 0}px`,
+        }
         return (
-          // z-index lives here, on the wrapper OUTSIDE PlayableSurface. The
-          // surface always has a transform, which is its own stacking context,
-          // so a z-index inside it can never order one window over another.
           <div
             key={w.id}
-            className="absolute"
-            style={{ left: w.x, top: w.y, zIndex: shown ? zIndexOf(state, w.id) : undefined }}
+            data-win-wrapper={w.id}
+            className={`absolute ${inFlight ? `os-flight-${inFlight.kind}` : ''}`}
+            style={style}
+            onAnimationEnd={onFlightEnd(w.id)}
           >
             <Playable id={`win-${w.id}`} caps={['move']}>
               <div style={{ width: w.width, height: w.height }}>
@@ -95,10 +189,11 @@ export function Desktop() {
                   id={w.id}
                   title={t(w.titleKey)}
                   hidden={!shown}
-                  onClose={() => close(w.id)}
-                  onFocus={() => focus(w.id)}
+                  onClose={() => closeWindow(w.id)}
+                  onFocus={() => dispatch({ type: 'focus', id: w.id })}
+                  onMinimize={() => minimizeWindow(w.id)}
                 >
-                  {bodies.get(w.id)}
+                  {bodyFor(w.id, openWindow)}
                 </Window>
               </div>
             </Playable>
@@ -107,7 +202,7 @@ export function Desktop() {
       })}
 
       <div data-taskbar>
-        <Taskbar open={state.open} onSelect={focus} />
+        <Taskbar open={state.open} minimized={state.minimized} onSelect={selectTask} />
       </div>
     </div>
   )

@@ -1,3 +1,78 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * WILDEAX OS window flights. Desktop.tsx puts one of the .os-flight-* classes
+ * on a window's wrapper, dispatches the state change on animationend, and sets
+ * --dock-dx / --dock-dy to the offset from the window's centre to its taskbar
+ * button. The classes never apply under prefers-reduced-motion; Desktop skips
+ * the flight and flips state directly.
+ */
+
+@keyframes os-minimize {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+  /* Pinch at the waist first, so it reads as being sucked rather than shrunk. */
+  30% {
+    transform: translate(0, 0) scale(0.9, 1.03);
+    opacity: 1;
+    clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
+  }
+  100% {
+    transform: translate(var(--dock-dx, 0px), var(--dock-dy, 60vh)) scale(0.06, 0.03);
+    opacity: 0;
+    clip-path: polygon(45% 0, 55% 0, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes os-close {
+  to {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+}
+
+@keyframes os-open {
+  from {
+    transform: translateY(14px) scale(0.92);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-2px) scale(1.01);
+    opacity: 1;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.os-flight-minimize,
+.os-flight-restore,
+.os-flight-close,
+.os-flight-open {
+  pointer-events: none;
+  will-change: transform, opacity, clip-path;
+}
+
+.os-flight-minimize {
+  animation: os-minimize 440ms cubic-bezier(0.6, 0, 0.9, 0.4) forwards;
+  transform-origin: 50% 100%;
+}
+
+.os-flight-restore {
+  animation: os-minimize 400ms cubic-bezier(0.1, 0.6, 0.3, 1) reverse both;
+  transform-origin: 50% 100%;
+}
+
+.os-flight-close {
+  animation: os-close 160ms ease-in forwards;
+}
+
+.os-flight-open {
+  animation: os-open 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
