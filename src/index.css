@@ -118,6 +118,7 @@
   position: absolute; top: 31%; left: 14%; width: 72%; height: 22%;
   display: flex; justify-content: space-between;
   transform: translate(var(--wcat-eye-x, 0px), var(--wcat-eye-y, 0px));
+  transition: transform 180ms ease-out;
 }
 .wcat-eyes > span { width: 30.56%; height: 100%; border-radius: 50%; background: #fff; }
 .wcat-mouth { position: absolute; left: 40%; top: 61%; width: 20%; height: 9%; }
@@ -127,16 +128,31 @@
 }
 .wcat-mouth::before { transform: rotate(138deg); }
 .wcat-mouth::after { transform: rotate(42deg); }
-.wcat[data-blink="true"] .wcat-eyes > span, .wcat[data-mode="nap"] .wcat-eyes > span { transform: scaleY(0.1); }
+.wcat[data-blink="true"] .wcat-eyes > span, .wcat[data-mode="nap"] .wcat-eyes > span,
+.wcat[data-mode="pet"] .wcat-eyes > span { transform: scaleY(0.1); }
+.wcat[data-mode="nap"] .wcat-eyes, .wcat[data-mode="pet"] .wcat-eyes { transform: none; transition: none; }
 .wcat[data-mode="nap"] .wcat-art { transform: scaleY(0.9); }
 .wcat[data-squash="true"][data-form="cat"] .wcat-art { animation: wcat-land 120ms ease-out; }
-.wcat[data-mode="walk"] .wcat-tail, .wcat[data-mode="follow"] .wcat-tail { animation: wcat-tail 600ms ease-in-out infinite alternate; }
+.wcat[data-mode="walk"] .wcat-tail { animation: wcat-tail 600ms ease-in-out infinite alternate; }
+.wcat[data-mode="stalk"] .wcat-art { transform: scale(1.06, 0.88); }
+.wcat[data-mode="crouch"] .wcat-art { animation: wcat-ready 180ms ease-in-out infinite alternate; }
+.wcat[data-mode="stalk"] .wcat-tail, .wcat[data-mode="crouch"] .wcat-tail { animation: wcat-tail 220ms ease-in-out infinite alternate; }
+.wcat[data-mode="pounce"] .wcat-art { transform: scale(0.92, 1.1); }
+.wcat[data-mode="pet"] .wcat-art { animation: wcat-pet 900ms ease-in-out infinite alternate; }
+.wcat[data-mode="pet"] .wcat-tail { transform: rotate(42deg); }
+.wcat[data-mode="poke"] .wcat-art { animation: wcat-poke 650ms ease-out; }
+.wcat[data-mode="poke"] .wcat-ear-left { transform: rotate(-18deg); }
+.wcat[data-mode="poke"] .wcat-ear-right { transform: rotate(18deg); }
+.wcat[data-mode="poke"] .wcat-eyes > span { transform: scaleY(1.12); }
 .wcat[data-form="ball"] { width: 36px; height: 36px; }
 .wcat[data-form="ball"] .wcat-silhouette { inset: 0; border-radius: 50%; }
 .wcat[data-form="ball"] .wcat-ear, .wcat[data-form="ball"] .wcat-tail { display: none; }
 .wcat[data-held="true"] .wcat-art { filter: drop-shadow(0 6px 5px rgb(0 0 0 / 35%)); }
 @keyframes wcat-land { from { transform: scale(1.08, 0.86); } to { transform: scale(1); } }
 @keyframes wcat-tail { from { transform: rotate(10deg); } to { transform: rotate(30deg); } }
+@keyframes wcat-ready { from { transform: translateX(-1px) scale(1.12, 0.74); } to { transform: translateX(1px) scale(1.1, 0.78); } }
+@keyframes wcat-pet { from { transform: rotate(-5deg) scale(1.04, 0.92); } to { transform: rotate(3deg) scale(1.02, 0.96); } }
+@keyframes wcat-poke { 15% { transform: translateY(-5px) scale(0.92, 1.12); } 40% { transform: scale(1.1, 0.88); } 70%, 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .wcat, .wcat * { animation: none !important; transition: none !important; }
 }

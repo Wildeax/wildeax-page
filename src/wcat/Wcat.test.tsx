@@ -26,6 +26,84 @@ function move(x = 340, y = 400, pointerType = 'mouse') {
 }
 
 describe('wcat interaction', () => {
+  it('keeps sleeping eyes still when a distant pointer moves', () => {
+    render(<Wcat label="wcat" />)
+    act(() => vi.advanceTimersByTime(46000))
+    expect(cat().dataset.mode).toBe('nap')
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 790, clientY: 100 })
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.mode).toBe('nap')
+    expect(cat().style.getPropertyValue('--wcat-eye-x')).toBe('0px')
+    expect(cat().style.getPropertyValue('--wcat-eye-y')).toBe('0px')
+  })
+
+  it.each(['mouse', 'touch'])('pokes on a %s click or tap without lifting', (type) => {
+    render(<Wcat label="wcat" mobile={type === 'touch'} />)
+    press(type)
+    fireEvent.pointerUp(cat(), { pointerId: 1, pointerType: type, clientX: 280, clientY: 578 })
+    expect(cat().dataset.mode).toBe('poke')
+    expect(cat().dataset.form).toBe('cat')
+    expect(cat().getAttribute('aria-pressed')).toBe('false')
+    act(() => vi.advanceTimersByTime(800))
+    expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('pets from slow head strokes, then rests with neutral eyes', () => {
+    render(<Wcat label="wcat" />)
+    for (const x of [266, 276, 286, 296]) {
+      fireEvent.pointerMove(cat(), { pointerType: 'mouse', clientX: x, clientY: 570, buttons: 0 })
+      act(() => vi.advanceTimersByTime(100))
+    }
+    expect(cat().dataset.mode).toBe('pet')
+    expect(cat().style.getPropertyValue('--wcat-eye-x')).toBe('0px')
+    expect(cat().style.getPropertyValue('--wcat-eye-y')).toBe('0px')
+    act(() => vi.advanceTimersByTime(1600))
+    expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('does not turn a canceled touch swipe into a poke', () => {
+    render(<Wcat mobile label="wcat" />)
+    press('touch')
+    move(280, 550, 'touch')
+    fireEvent.pointerUp(cat(), { pointerId: 1, pointerType: 'touch' })
+    expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('turns real nearby pointer reversals into a crouch and one pounce', () => {
+    render(<Wcat label="wcat" />)
+    const modes = new Set<string>()
+    for (const x of [360, 390, 360, 390]) {
+      fireEvent.pointerMove(window, { pointerType: 'mouse', isPrimary: true, clientX: x, clientY: 580, buttons: 0 })
+      act(() => vi.advanceTimersByTime(120))
+      modes.add(cat().dataset.mode!)
+    }
+    for (let i = 0; i < 30; i++) {
+      act(() => vi.advanceTimersByTime(50))
+      modes.add(cat().dataset.mode!)
+    }
+    expect([...modes]).toEqual(expect.arrayContaining(['stalk', 'crouch', 'pounce']))
+    expect(cat().dataset.mode).toBe('sit')
+    expect(cat().dataset.ground).toBe('floor')
+  })
+
+  it('does not hunt movement made while dragging something else', () => {
+    render(<Wcat label="wcat" />)
+    for (const x of [360, 390, 360, 390]) {
+      fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: x, clientY: 580, buttons: 1 })
+      act(() => vi.advanceTimersByTime(120))
+    }
+    expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('lets keyboard and assistive button activation poke the cat', () => {
+    render(<Wcat label="wcat" />)
+    fireEvent.keyDown(cat(), { key: 'Enter' })
+    expect(cat().dataset.mode).toBe('poke')
+    act(() => vi.advanceTimersByTime(800))
+    fireEvent.click(cat(), { detail: 0 })
+    expect(cat().dataset.mode).toBe('poke')
+  })
+
   it('lifts only after the mouse threshold and becomes a cat after settling', () => {
     render(<Wcat label="wcat" />)
     expect(cat().dataset.form).toBe('cat')
@@ -121,7 +199,7 @@ describe('wcat interaction', () => {
     expect(cat().dataset.ground).toBe('floor')
   })
 
-  it('finishes unrolling on the floor before following the pointer onto a window', () => {
+  it('finishes unrolling on the floor without a cursor-triggered jump', () => {
     const view = render(<div><div data-window="window"><div data-drag-handle /></div><Wcat label="wcat" /></div>)
     const handle = view.container.querySelector<HTMLElement>('[data-drag-handle]')!
     vi.spyOn(handle, 'getBoundingClientRect').mockReturnValue(new DOMRect(300, 450, 500, 33))

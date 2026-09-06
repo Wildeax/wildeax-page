@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { exceedsDragThreshold, LONG_PRESS_MS } from '@/play/drag'
-import { createBrain, think } from './brain'
+import { createBrain, gaze, think } from './brain'
+import { createMotion, observe } from './senses'
 import { BALL_SIZE, CAT_SIZE, REST_SECONDS, clamp, createBody, sizeOf, step, throwVelocity } from './physics'
 import type { Sample } from './physics'
 import { readWorld } from './world'
@@ -30,6 +31,8 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
     let body = createBody(world)
     let brain = createBrain(clock(), Math.random)
     let pointer = { x: 0, y: 0, movedAt: clock(), inside: false }
+    let motion = createMotion()
+    let pokedAt = -Infinity
     let gesture: Gesture | null = null
     let keyboardHeld = false
     let holdTimer: ReturnType<typeof setTimeout> | undefined
@@ -47,10 +50,9 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
       el.style.transform = `translate3d(${body.x - size / 2}px, ${body.y - size}px, 0)`
       el.style.setProperty('--wcat-facing', String(brain.facing))
       el.style.setProperty('--wcat-roll', `${body.form === 'ball' ? body.angle : 0}rad`)
-      const dx = pointer.inside && !reduced ? clamp((pointer.x - body.x) / 100, -2, 2) : 0
-      const dy = pointer.inside && !reduced ? clamp((pointer.y - body.y) / 100, -2, 2) : 0
-      el.style.setProperty('--wcat-eye-x', `${dx}px`)
-      el.style.setProperty('--wcat-eye-y', `${dy}px`)
+      const eyes = gaze(brain, body, now, reduced)
+      el.style.setProperty('--wcat-eye-x', `${eyes.x}px`)
+      el.style.setProperty('--wcat-eye-y', `${eyes.y}px`)
       el.dataset.blink = String(!reduced && now < blinkUntil)
       el.dataset.squash = String(!reduced && now < squashUntil)
       el.dataset.ground = body.ground ?? ''
@@ -68,6 +70,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
     }
 
     function lift() {
+      motion = createMotion()
       body = { ...body, form: 'ball', vx: 0, vy: 0, ground: null, rest: 0 }
       brain.mode = 'ball'
       if (gesture) {
@@ -88,12 +91,35 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
         const velocity = !cancel && !reduced && current ? throwVelocity(current.samples) : { vx: 0, vy: 0 }
         body = { ...body, ...velocity, ground: null, rest: 0 }
         pointer.movedAt = clock()
+        motion = createMotion()
+      } else if (current && !cancel) {
+        poke()
       }
       if (!disposed) paint(clock())
     }
 
     function sample(e: PointerEvent): Sample {
       return { x: e.clientX - world.left, y: e.clientY - world.top, at: clock() }
+    }
+
+    function decide(now: number) {
+      ({ body, brain } = think(brain, body, { now, world, pointer, mobile, random: Math.random,
+        signals: { teasedAt: motion.teasedAt, pettedAt: motion.pettedAt, pokedAt } }))
+    }
+
+    function poke() {
+      if (disposed || held() || gesture || body.form !== 'cat') return
+      pokedAt = clock()
+      motion = createMotion()
+      decide(pokedAt)
+      paint(pokedAt)
+    }
+
+    function onClick(e: MouseEvent) {
+      e.stopPropagation()
+      // Native pointer clicks already reacted on release. A click without
+      // pointer detail is keyboard/assistive activation of the button.
+      if (e.detail === 0) poke()
     }
 
     function onDown(e: PointerEvent) {
@@ -105,7 +131,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
       world = readWorld(layer, mobile, reduced)
       const origin = sample(e)
       gesture = { id: e.pointerId, touch: e.pointerType === 'touch', active: false, origin, offsetX: body.x - origin.x, offsetY: body.y - BALL_SIZE / 2 - origin.y, samples: [origin] }
-      if (brain.mode === 'nap') { brain = createBrain(clock(), Math.random); paint(clock()) }
+      motion = createMotion()
       if (gesture.touch) holdTimer = setTimeout(lift, LONG_PRESS_MS)
       else el.setPointerCapture(e.pointerId)
     }
@@ -127,8 +153,9 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
 
     function onUp(e: PointerEvent) {
       if (gesture?.id !== e.pointerId) return
-      gesture.samples.push(sample(e))
-      finish()
+      const point = sample(e)
+      gesture.samples.push(point)
+      finish(!gesture.active && exceedsDragThreshold(gesture.origin, point))
     }
     function onCancel(e: PointerEvent) { if (gesture?.id === e.pointerId) finish(true) }
     function cancel() { finish(true) }
@@ -137,14 +164,20 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
     // after the hold; changing touch-action at that point would be too late.
     function onTouchMove(e: TouchEvent) { if (gesture?.active && e.cancelable) e.preventDefault() }
     function onPointer(e: PointerEvent) {
+      if (e.pointerType === 'touch' || e.isPrimary === false) return
       const p = sample(e)
       if (pointer.x !== p.x || pointer.y !== p.y) pointer.movedAt = p.at
       pointer = { ...pointer, x: p.x, y: p.y, inside: p.x >= 0 && p.x <= world.width && p.y >= 0 && p.y <= world.floor }
+      if (!gesture && !held() && !e.buttons && pointer.inside) motion = observe(motion, p, body)
+      else motion = createMotion()
     }
-    function onLeave() { pointer.inside = false }
+    function onLeave() { pointer.inside = false; motion = createMotion() }
 
     function onKey(e: KeyboardEvent) {
-      if (e.key === ' ' || e.key === 'Enter') {
+      if (e.key === 'Enter' && !keyboardHeld) {
+        e.preventDefault()
+        if (!e.repeat) poke()
+      } else if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault()
         if (e.repeat || gesture) return
         if (keyboardHeld) finish(true)
@@ -169,16 +202,16 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
       if (!held()) {
         // A mouse press pins the cat until the threshold or release so it
         // cannot walk away while somebody is trying to pick it up.
-        if (!gesture) ({ body, brain } = think(brain, body, { now, world, pointer, mobile, random: Math.random }))
+        if (!gesture) decide(now)
         else body.vx = 0
         const airborne = !body.ground
         body = step(body, dt, world)
         if (airborne && body.ground) squashUntil = now + 0.12
         if (body.form === 'ball' && body.rest >= REST_SECONDS) {
           body = { ...body, form: 'cat', vx: 0, vy: 0, angle: 0, rest: 0, x: clamp(body.x, CAT_SIZE / 2, world.width - CAT_SIZE / 2) }
-          // Ignore the throw's parked pointer until it moves again. Otherwise
-          // follow can launch a new jump before the unroll transition finishes.
-          brain = createBrain(now, Math.random, pointer.movedAt)
+          // Start a fresh rest and discard movement made during the throw.
+          brain = createBrain(now, Math.random)
+          motion = createMotion()
         }
       } else {
         body.x = clamp(body.x, BALL_SIZE / 2, world.width - BALL_SIZE / 2)
@@ -192,6 +225,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
     function onVisibility() {
       cancelAnimationFrame(frame)
       finish(true)
+      motion = createMotion()
       previousTime = clock()
       if (!document.hidden) frame = requestAnimationFrame(tick)
     }
@@ -206,6 +240,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
     el.addEventListener('contextmenu', noNativeDrag)
     el.addEventListener('dragstart', noNativeDrag)
     el.addEventListener('keydown', onKey)
+    el.addEventListener('click', onClick)
     el.addEventListener('blur', cancel)
     window.addEventListener('pointermove', onPointer, { passive: true })
     window.addEventListener('blur', cancel)
@@ -227,6 +262,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
       el.removeEventListener('contextmenu', noNativeDrag)
       el.removeEventListener('dragstart', noNativeDrag)
       el.removeEventListener('keydown', onKey)
+      el.removeEventListener('click', onClick)
       el.removeEventListener('blur', cancel)
       window.removeEventListener('pointermove', onPointer)
       window.removeEventListener('blur', cancel)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createBrain, think } from './brain'
+import { createBrain, gaze, think } from './brain'
 import type { Input } from './brain'
 import { createBody, step } from './physics'
 import type { World } from './physics'
@@ -34,44 +34,47 @@ describe('wcat brain', () => {
     expect(wake.brain.mode).toBe('sit')
   })
 
-  it('follows a parked pointer, gives up after six seconds, and does not immediately restart', () => {
+  it('ignores a parked pointer instead of following it', () => {
     const pointer = { x: 700, y: 500, movedAt: 0.5, inside: true }
-    const following = think(createBrain(0, random), createBody(world), input(2.1, { pointer }))
-    expect(following.brain.mode).toBe('follow')
-    expect(following.body.vx).toBe(70)
-    const stopped = think(following.brain, following.body, input(8.2, { pointer }))
-    expect(stopped.brain.mode).toBe('sit')
-    expect(think(stopped.brain, stopped.body, input(8.3, { pointer })).brain.mode).toBe('sit')
+    const result = think(createBrain(0, random), createBody(world), input(2.1, { pointer }))
+    expect(result.brain.mode).toBe('sit')
+    expect(result.body.vx).toBe(0)
+    expect(gaze(result.brain, result.body, 2.1)).toEqual({ x: 0, y: 0 })
   })
 
-  it('stops following when the pointer moves', () => {
-    const pointer = { x: 700, y: 500, movedAt: 0.5, inside: true }
-    const following = think(createBrain(0, random), createBody(world), input(2.1, { pointer }))
-    expect(think(following.brain, following.body, input(2.2, { pointer: { ...pointer, movedAt: 2.2 } })).brain.mode).toBe('sit')
+  it('glances briefly at a nearby movement, then looks away even if movement continues', () => {
+    const body = createBody(world)
+    const pointer = { x: 400, y: 550, movedAt: 1, inside: true }
+    const first = think(createBrain(0, random), body, input(1, { pointer }))
+    expect(gaze(first.brain, body, 1).x).toBeGreaterThan(0)
+    const moved = think(first.brain, body, input(1.1, { pointer: { ...pointer, x: 180, movedAt: 1.1 } }))
+    expect(gaze(moved.brain, body, 1.1)).toEqual(gaze(first.brain, body, 1))
+    const ignored = think(moved.brain, body, input(3, { pointer: { ...pointer, movedAt: 3 } }))
+    expect(gaze(ignored.brain, body, 3)).toEqual({ x: 0, y: 0 })
   })
 
   it('does not flicker between sleeping and awake under a nearby parked pointer', () => {
     const pointer = { x: 280, y: 590, movedAt: 0, inside: true }
     const first = think(createBrain(0, random), createBody(world), input(46, { pointer }))
     const next = think(first.brain, first.body, input(46.016, { pointer }))
-    expect(first.brain.mode).toBe('sit')
-    expect(next.brain.mode).toBe('sit')
+    expect(first.brain.mode).toBe('nap')
+    expect(next.brain.mode).toBe('nap')
   })
 
   it('rests after unrolling instead of immediately following the throw pointer', () => {
     const pointer = { x: 700, y: 450, movedAt: 1, inside: true }
-    const brain = createBrain(8, random, pointer.movedAt)
+    const brain = createBrain(8, random)
     const result = think(brain, createBody(world), input(8.1, { pointer }))
     expect(result.brain.mode).toBe('sit')
     expect(result.body.vx).toBe(0)
-    const next = think(result.brain, result.body, input(10, { pointer: { ...pointer, movedAt: 8.2 } }))
-    expect(next.brain.mode).toBe('follow')
+    const next = think(result.brain, result.body, input(10, { pointer: { ...pointer, movedAt: 8.2 }, signals: { teasedAt: 7 } }))
+    expect(next.brain.mode).toBe('sit')
   })
 
   it('jumps to a reachable window and lands on its top', () => {
     const bounds = { ...world, platforms: [{ id: 'window', left: 340, right: 550, y: 450 }] }
     const pointer = { x: 420, y: 460, movedAt: 0, inside: true }
-    const jump = think(createBrain(0, random), createBody(bounds), input(2, { world: bounds, pointer }))
+    const jump = think(createBrain(0, random), createBody(bounds), input(5.1, { world: bounds, pointer }))
     expect(jump.brain.mode).toBe('jump')
     expect(jump.body.vy).toBeLessThan(0)
     let body = jump.body
@@ -104,5 +107,58 @@ describe('wcat brain', () => {
     const result = think(createBrain(0, random), createBody(world), args)
     expect(result.brain.mode).toBe('sit')
     expect(result.body.vx).toBe(0)
+  })
+
+  it('stalks a teased cursor, crouches, then pounces once and cools down', () => {
+    const pointer = { x: 390, y: 580, movedAt: 1, inside: true }
+    const args = { pointer, signals: { teasedAt: 1 } }
+    const stalk = think(createBrain(0, random), createBody(world), input(1, args))
+    expect(stalk.brain.mode).toBe('stalk')
+    expect(stalk.body.vx).toBe(36)
+    const crouch = think(stalk.brain, stalk.body, input(1.5, args))
+    expect(crouch.brain.mode).toBe('crouch')
+    expect(crouch.body.vx).toBe(0)
+    const pounce = think(crouch.brain, crouch.body, input(2.1, args))
+    expect(pounce.brain.mode).toBe('pounce')
+    expect(pounce.body.vy).toBeLessThan(0)
+    let body = pounce.body
+    for (let i = 0; i < 120 && !body.ground; i++) body = step(body, 1 / 120, world)
+    expect(body.ground).toBe('floor')
+    expect(body.x).toBeCloseTo(390, -1)
+    const landed = think(pounce.brain, body, input(2.7, args))
+    const again = think(landed.brain, landed.body, input(3, { pointer: { ...pointer, x: 500 }, signals: { teasedAt: 3 } }))
+    expect(again.brain.mode).toBe('sit')
+  })
+
+  it('gives up the hunt if the toy leaves and will not pounce off a window', () => {
+    const pointer = { x: 390, y: 580, movedAt: 1, inside: true }
+    const stalk = think(createBrain(0, random), createBody(world), input(1, { pointer, signals: { teasedAt: 1 } }))
+    expect(think(stalk.brain, stalk.body, input(1.2, { pointer: { ...pointer, inside: false } })).brain.mode).toBe('sit')
+    const bounds = { ...world, platforms: [{ id: 'window', left: 200, right: 340, y: 300 }] }
+    const body = { ...createBody(bounds), y: 300, ground: 'window' }
+    const result = think(createBrain(0, random), body, input(1, { world: bounds, pointer: { ...pointer, y: 290 }, signals: { teasedAt: 1 } }))
+    expect(result.brain.mode).toBe('sit')
+    expect(result.body.ground).toBe('window')
+  })
+
+  it.each(['mobile', 'reduced'])('allows affection but not hunting with %s restrictions', (kind) => {
+    const args = { mobile: kind === 'mobile', world: { ...world, reducedMotion: kind === 'reduced' }, pointer: { x: 390, y: 580, movedAt: 1, inside: true } }
+    const first = think(createBrain(0, random), createBody(world), input(1, { ...args, signals: { teasedAt: 1 } }))
+    expect(first.brain.mode).toBe('sit')
+    const pet = think(first.brain, first.body, input(2, { ...args, signals: { pettedAt: 2 } }))
+    expect(pet.brain.mode).toBe('pet')
+    expect(pet.body.vx).toBe(0)
+    expect(gaze(pet.brain, pet.body, 2)).toEqual({ x: 0, y: 0 })
+  })
+
+  it('wakes to a poke or pet and does not immediately go back to sleep', () => {
+    const sleeping = think(createBrain(0, random), createBody(world), input(46))
+    for (const signals of [{ pokedAt: 47 }, { pettedAt: 47 }]) {
+      const awake = think(sleeping.brain, sleeping.body, input(47, { signals }))
+      expect(['poke', 'pet']).toContain(awake.brain.mode)
+      const resting = think(awake.brain, awake.body, input(49, { signals }))
+      expect(resting.brain.mode).toBe('sit')
+      expect(think(resting.brain, resting.body, input(49.1, { signals })).brain.mode).toBe('sit')
+    }
   })
 })
