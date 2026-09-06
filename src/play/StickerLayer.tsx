@@ -118,12 +118,10 @@ function StickerScene({ isDesktop }: { isDesktop: boolean }) {
         />
       )}
 
-      {/* Keep the dock mounted while collapsed: the private yarn toggle is
-          portalled into it and must survive opening/closing the phone tray. */}
-      <div className={isDesktop ? 'contents' : 'mobile-play-panel fixed z-40 rounded-2xl border border-white/15 bg-[#11141c]/95 p-3 shadow-2xl backdrop-blur'}
+      <div className={isDesktop ? 'contents' : 'mobile-play-tools'} data-mobile-tools={!isDesktop ? true : undefined}>
+      <div className={isDesktop ? 'contents' : 'mobile-sticker-picker'}
         style={!isDesktop && !open ? { display: 'none' } : undefined} id="play-panel">
-      {!isDesktop && <p className="mb-3 text-xs leading-relaxed text-zinc-300">{t('os.play.help')}</p>}
-      <div data-sticker-dock className={isDesktop ? 'fixed bottom-24 left-1/2 z-40 flex -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur' : 'mobile-play-grid gap-1'}>
+      <div data-sticker-dock className={isDesktop ? 'fixed bottom-24 left-1/2 z-40 flex -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur' : 'mobile-sticker-strip'}>
         {STICKER_KINDS.map((kind) => (
           <button
             key={kind.id}
@@ -139,23 +137,27 @@ function StickerScene({ isDesktop }: { isDesktop: boolean }) {
             {renderKind(kind)}
           </button>
         ))}
-      </div>
-      {!isDesktop && <button type="button" className="mt-2 min-h-11 w-full rounded-xl border border-white/15 px-3 text-sm"
+      {!isDesktop && <button type="button" className="min-h-11 rounded-xl border border-white/15 px-3 text-xs"
         onClick={() => { setErasing(true); setSelected(null); setOpen(false) }}>{t('os.play.erase')}</button>}
       </div>
+      </div>
 
-      {!isDesktop && (selected || erasing ? (
-        <div className="mobile-play-status fixed z-40 flex items-center gap-3 rounded-2xl border border-white/15 bg-[#11141c]/95 p-2 pl-3 shadow-xl">
+      {!isDesktop && (selected || erasing) && (
+        <div className="phone-placement-message flex items-center gap-3 p-2 pl-3">
           <p role="status" className="text-xs leading-relaxed">{t(erasing ? 'os.play.erasing' : 'os.play.placing')}</p>
           <button type="button" className="min-h-11 shrink-0 rounded-xl border border-white/20 px-3 text-sm"
             onClick={() => { setSelected(null); setErasing(false) }}>{t(erasing ? 'os.play.done' : 'os.play.cancel')}</button>
         </div>
-      ) : (
-        <button type="button" className="mobile-play-toggle fixed z-40 min-h-11 rounded-full border border-white/20 bg-[#11141c]/95 px-4 text-sm shadow-xl"
-          aria-expanded={open} aria-controls="play-panel" onClick={() => setOpen(!open)}>
-          {t(open ? 'os.play.close' : 'os.play.open')}
+      )}
+      {!isDesktop && <div className="mobile-play-row">
+        <button type="button" className="phone-tool" aria-label={t('os.play.open')}
+          aria-expanded={open} aria-controls="play-panel" onClick={() => { setSelected(null); setErasing(false); setOpen(!open) }}>
+          <span aria-hidden="true" className="text-xl">✦</span><span>{t('os.play.open')}</span>
         </button>
-      ))}
+        {/* This dock stays visible while the sticker strip opens and closes. */}
+        <div data-wcat-controls className="contents" />
+      </div>}
+      </div>
     </>
   )
 }

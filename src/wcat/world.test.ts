@@ -4,6 +4,29 @@ import { readWorld } from './world'
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
+it('uses visible mobile card headings as perches above the phone toolbar', () => {
+  const root = document.createElement('main')
+  const layer = document.createElement('div')
+  root.append(layer)
+  document.body.append(root)
+  vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 844))
+  for (const [id, top] of [['visible', 300], ['offscreen', -50], ['behind-tools', 820]] as const) {
+    const card = document.createElement('section')
+    card.dataset.mobileCard = ''
+    card.dataset.window = id
+    const heading = document.createElement('h2')
+    card.append(heading)
+    root.append(card)
+    vi.spyOn(heading, 'getBoundingClientRect').mockReturnValue(new DOMRect(16, top, 358, 40))
+  }
+  const tools = document.createElement('div')
+  tools.dataset.mobileTools = ''
+  document.body.append(tools)
+  vi.spyOn(tools, 'getBoundingClientRect').mockReturnValue(new DOMRect(12, 764, 366, 64))
+  expect(readWorld(layer, true, false)).toMatchObject({ floor: 756, ballPlatforms: true, platforms: [{ id: 'visible', left: 16, right: 374, y: 300 }] })
+  expect(readWorld(layer, true, false, true).platforms).toEqual([])
+})
+
 it('keeps the mobile floor above its safe-area padding', () => {
   const layer = document.createElement('div')
   layer.style.paddingBottom = '42px'

@@ -1,5 +1,5 @@
 import { CAT_SIZE } from './physics'
-import type { Obstacle, World } from './physics'
+import type { Body, Obstacle, World } from './physics'
 
 /** All layout reads happen together, before the frame writes the cat transform. */
 export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: boolean, room = false): World & { left: number; top: number } {
@@ -23,7 +23,21 @@ export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: bo
       world.floor = Math.max(CAT_SIZE, Math.min(world.floor, dock.top - rect.top - 4))
     }
   }
-  if (mobile) return { ...world, platforms: [] }
+  if (room) return { ...world, platforms: [] }
+  if (mobile) {
+    const root = layer.closest('[data-mobile]') ?? layer.parentElement ?? layer
+    const tools = layer.ownerDocument.querySelector('[data-mobile-tools]')?.getBoundingClientRect()
+    if (tools?.width && tools.top > rect.top) world.floor = Math.max(CAT_SIZE, Math.min(world.floor, tools.top - rect.top - 8))
+    const header = root.querySelector('.mobile-header')?.getBoundingClientRect()
+    const ceiling = Math.max(0, (header?.bottom ?? rect.top) - rect.top) + CAT_SIZE
+    const platforms = [...root.querySelectorAll<HTMLElement>('[data-mobile-card] > h2')].flatMap((el) => {
+      const r = el.getBoundingClientRect()
+      const y = r.top - rect.top, left = Math.max(0, r.left - rect.left), right = Math.min(width, r.right - rect.left)
+      if (!r.width || y < ceiling || y >= world.floor || right - left < CAT_SIZE) return []
+      return [{ id: el.parentElement!.dataset.window!, left, right, y }]
+    })
+    return { ...world, platforms, ballPlatforms: true }
+  }
   const root = layer.parentElement ?? layer
   const band = root.querySelector('[data-marquee]')?.getBoundingClientRect()
   const obstacles: Obstacle[] = []
@@ -43,4 +57,13 @@ export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: bo
   })
   for (const wall of obstacles) if (wall.y >= CAT_SIZE && wall.right - wall.left >= CAT_SIZE) platforms.push(wall)
   return { ...world, platforms, obstacles }
+}
+
+/** A phone scroll moves the perch, not the animal's position on the card. */
+export function carryWithPage(body: Body, previous: World, next: World): Body {
+  if (!body.ground || body.ground === 'floor') return body
+  const before = previous.platforms.find((p) => p.id === body.ground)
+  const after = next.platforms.find((p) => p.id === body.ground)
+  if (!before || !after) return { ...body, ground: null }
+  return { ...body, x: Math.max(22, Math.min(next.width - 22, body.x + after.left - before.left)), y: after.y }
 }

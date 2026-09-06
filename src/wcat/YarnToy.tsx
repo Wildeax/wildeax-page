@@ -1,45 +1,50 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { exceedsDragThreshold, LONG_PRESS_MS } from '@/play/drag'
 import { BALL_SIZE, clamp, throwVelocity } from './physics'
 import type { Sample } from './physics'
 import { createYarn, releaseYarn, stepYarn, stringPath } from './yarn'
 import type { YarnRef } from './yarn'
-import { readWorld } from './world'
+import { carryWithPage, readWorld } from './world'
+import { phoneTilt } from './phone'
+import type { PhoneRef } from './phone'
 
-interface Props { model: YarnRef; mobile: boolean; label: string; help: string }
+interface Props { model: YarnRef; mobile: boolean; label: string; help: string; phone?: PhoneRef; controls?: ReactNode; shortLabel?: string }
 
-export function YarnToy({ model, mobile, label, help }: Props) {
+export function YarnToy({ model, mobile, label, help, phone, controls, shortLabel = 'Yarn' }: Props) {
   const [dock, setDock] = useState<HTMLElement | null>(null)
   const [active, setActive] = useState(false)
   const remove = useCallback(() => setActive(false), [])
   useEffect(() => {
-    let target = document.querySelector<HTMLElement>('[data-sticker-dock]')
+    const selector = mobile ? '[data-wcat-controls]' : '[data-sticker-dock]'
+    let target = document.querySelector<HTMLElement>(selector)
     setDock(target)
     // The responsive sticker subscription remounts its dock. Media-query
     // listeners can commit in either order, so a mount-only lookup goes stale.
     const observer = new MutationObserver(() => {
       if (target?.isConnected) return
-      target = document.querySelector<HTMLElement>('[data-sticker-dock]')
+      target = document.querySelector<HTMLElement>(selector)
       setDock(target)
     })
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
-  }, [])
+  }, [mobile])
   return <>
-    {dock && createPortal(<button type="button" data-yarn-toggle aria-label={label} title={help} aria-pressed={active}
+    {dock && createPortal(<><button type="button" data-yarn-toggle aria-label={label} title={help} aria-pressed={active}
       onClick={() => setActive((value) => !value)}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); remove() }}
-      className={`flex h-11 w-11 items-center justify-center rounded-xl text-3xl leading-none transition ${active ? 'bg-brand-400/30 ring-2 ring-brand-400' : 'hover:bg-white/10'}`}>
-      <span aria-hidden="true">🧶</span>
-    </button>, dock)}
-    {active && <YarnBall model={model} mobile={mobile} help={help} onRemove={remove} />}
+      className={mobile ? 'phone-tool' : `flex h-11 w-11 items-center justify-center rounded-xl text-3xl leading-none transition ${active ? 'bg-brand-400/30 ring-2 ring-brand-400' : 'hover:bg-white/10'}`}>
+      <span aria-hidden="true" className={mobile ? 'text-2xl' : undefined}>🧶</span>
+      {mobile && <span>{shortLabel}</span>}
+    </button>{controls}</>, dock)}
+    {active && <YarnBall model={model} mobile={mobile} phone={phone} help={help} onRemove={remove} />}
   </>
 }
 
 interface Drag { id: number; touch: boolean; active: boolean; origin: Sample; samples: Sample[]; dx: number; dy: number }
 
-function YarnBall({ model, mobile, help, onRemove }: Omit<Props, 'label'> & { onRemove: () => void }) {
+function YarnBall({ model, mobile, help, phone, onRemove }: Omit<Props, 'label'> & { onRemove: () => void }) {
   const layerRef = useRef<HTMLDivElement>(null)
   const ballRef = useRef<HTMLButtonElement>(null)
   const stringRef = useRef<SVGPathElement>(null)
@@ -87,7 +92,7 @@ function YarnBall({ model, mobile, help, onRemove }: Omit<Props, 'label'> & { on
       if (e.button !== 0 || !e.isPrimary || drag || keyboardHeld || !model.current) return
       e.stopPropagation()
       if (e.pointerType !== 'touch') e.preventDefault()
-      world = readWorld(layer, mobile, reduced)
+      world = { ...readWorld(layer, mobile, reduced), tilt: mobile && !reduced ? phoneTilt(phone, clock()) : undefined }
       const origin = sample(e)
       drag = { id: e.pointerId, touch: e.pointerType === 'touch', active: false, origin, samples: [origin], dx: model.current.body.x - origin.x, dy: model.current.body.y - origin.y }
       if (drag.touch) holdTimer = setTimeout(lift, LONG_PRESS_MS)
@@ -136,7 +141,9 @@ function YarnBall({ model, mobile, help, onRemove }: Omit<Props, 'label'> & { on
     function tick(timestamp: number) {
       if (disposed || document.hidden || !model.current) return
       const now = timestamp / 1000
-      world = readWorld(layer, mobile, reduced)
+      const nextWorld = { ...readWorld(layer, mobile, reduced), tilt: mobile && !reduced ? phoneTilt(phone, now) : undefined }
+      if (mobile && !model.current.held) model.current.body = carryWithPage(model.current.body, world, nextWorld)
+      world = nextWorld
       model.current = stepYarn(model.current, Math.min(0.25, Math.max(0, now - previousTime)), world)
       previousTime = now
       paint()
@@ -183,7 +190,7 @@ function YarnBall({ model, mobile, help, onRemove }: Omit<Props, 'label'> & { on
       document.removeEventListener('visibilitychange', visibility)
       media?.removeEventListener('change', motion)
     }
-  }, [mobile, model, onRemove])
+  }, [mobile, model, onRemove, phone])
   return <div ref={layerRef} className={`wcat-yarn-layer${mobile ? ' wcat-mobile' : ''}`} data-yarn-layer>
     <svg className="wcat-string" aria-hidden="true"><path ref={stringRef} fill="none" stroke="#dba79a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
     <button ref={ballRef} type="button" className="wcat-yarn" data-yarn aria-label={help} title={help} aria-keyshortcuts="Space Enter ArrowUp ArrowDown ArrowLeft ArrowRight Escape Delete">

@@ -1,6 +1,6 @@
 # Hand-off: wildeax.com (WILDEAX OS)
 
-Updated 2026-09-06 after publishing wcat and the mobile/sticker fixes.
+Updated 2026-09-06 with a mobile-play preview; production is still the earlier mobile/sticker release.
 Read this first. It says what exists, where it is, how to
 check it, and what is pending.
 
@@ -26,6 +26,7 @@ never appear anywhere public.
 | Production | Cloudflare Worker `wildeax-page`, served at `https://www.wildeax.com`. Apex 301s to www through an account-level Bulk Redirect list |
 | Production version | Worker version `5ce57800-77ec-412e-8293-f2bc146672f4`, 100% traffic. Runtime commit `781b2fe`, merged via PR #2 at `28a0e2d` |
 | Mobile/sticker preview | Version `5ce57800-77ec-412e-8293-f2bc146672f4`, runtime code from `781b2fe`. Use `https://5ce57800-wildeax-page.arena-riot-proxy.workers.dev/?room=mobile-review-5ce57800` |
+| New mobile-play preview (NOT live) | Branch `feat/mobile-play`. Version `a02a1761-913e-42c3-8316-04a18b8b6558`. Use `https://a02a1761-wildeax-page.arena-riot-proxy.workers.dev/?room=phone-review-a02a1761` |
 | Shared room | `wildeax-2` in `src/play/room.ts`. Bump `DEFAULT_ROOM` to reset every visitor's positions |
 | Desktop code | `src/os/` (Desktop, Window, Taskbar, DesktopIcon, registry, windowState, marquee) |
 | Play layer | `src/play/` (PlayableSurface drag, sync.tsx is the only playhtml importer, StickerLayer) |
@@ -39,7 +40,7 @@ never appear anywhere public.
 
 ```bash
 npm run dev                                  # Vite dev server
-npx vitest run --maxWorkers=1 --silent       # 217 tests. One worker: this PC runs near its memory limit
+npx vitest run --maxWorkers=1 --silent       # 240 tests on mobile-play branch. One worker: this PC runs near its memory limit
 npm run build                                # tsc -b && vite build
 npx wrangler versions upload                 # preview URL, does not touch production
 npx wrangler deploy                          # PRODUCTION. Needs the owner's explicit yes, every time
@@ -52,6 +53,7 @@ node verify-wcat-handling.mjs https://<preview>.workers.dev # placement, gaze, t
 node verify-stickers-tail.mjs https://<preview>.workers.dev # shared removal and flat rear tail
 node verify-wcat-toy.mjs https://<preview>.workers.dev # local yarn play and selection walls/perches
 node verify-mobile.mjs https://<preview>.workers.dev # 50 mobile/sticker checks, including a failing legacy control
+node verify-mobile-play.mjs https://<preview>.workers.dev # 25 touch, perching, pursuit and simulated sensor checks
 node profile-wcat.mjs https://<preview>.workers.dev # ten-window callback timings
 node profile-wcat.mjs https://<preview>.workers.dev --toy # separate cat and yarn timings
 node verify.mjs https://www.wildeax.com          # post-deploy smoke in an isolated room
@@ -154,6 +156,19 @@ See `docs/superpowers/plans/2026-09-05-mobile-experience.md` for regressions,
 verification and release records. PR: `https://github.com/Wildeax/wildeax-page/pull/2`.
 
 ## Pending
+
+Mobile play is built on `feat/mobile-play` and uploaded for review, not
+deployed. It replaces the Play popover with a four-tool row and swipeable
+sticker strip; adds opt-in, locally held tilt readings, calibration, Pet,
+card perches, mobile yarn chasing and page-scroll support. Desktop and
+mobile cats now leave their perch to pursue a lower toy, and lose interest
+early when yarn stays still. Sensor access is never requested on load.
+240 unit/component tests, build and changed-file lint pass. Full lint keeps
+its 19 existing errors and one warning. The 50 layout/isolation checks and
+25 new mobile-play browser checks pass on the hosted preview. Real iOS and
+Android sensor feel/permission UI remain untested. Have the owner try the
+preview on their phone before promoting it. Details and verification are in
+`docs/superpowers/plans/2026-09-06-mobile-play.md`.
 
 1. **Art window.** Ships with placeholders. Needs real artwork from the
    owner and a decision on how to add pieces (a folder under `public/art/`

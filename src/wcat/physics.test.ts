@@ -193,3 +193,18 @@ describe('gentle placement and rough throws', () => {
     expect(fresh).toMatchObject({ fastTurns: 0, hardImpacts: 0, launchSpeed: 0 })
   })
 })
+it('lets mobile balls bounce on card headings while desktop balls pass through', () => {
+  const page = { width: 390, floor: 760, platforms: [{ id: 'card', left: 16, right: 374, y: 300 }], ballPlatforms: true }
+  const body = { ...createBody(page), form: 'ball' as const, x: 180, y: 280, vy: 400, ground: null }
+  const mobile = step(body, 0.06, page)
+  expect(mobile.y).toBeLessThan(300)
+  expect(mobile.vy).toBeLessThan(0)
+  expect(step(body, 0.06, { ...page, ballPlatforms: false }).y).toBeGreaterThan(300)
+})
+
+it('rolls a resting ball with tilt, but not under reduced motion', () => {
+  const page = { width: 390, floor: 760, platforms: [], tilt: { x: 1, y: 0 } }
+  const body = { ...createBody(page), form: 'ball' as const, x: 180 }
+  expect(step(body, 0.1, page).vx).toBeGreaterThan(50)
+  expect(step(body, 0.1, { ...page, reducedMotion: true }).vx).toBe(0)
+})

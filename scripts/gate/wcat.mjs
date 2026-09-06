@@ -42,7 +42,7 @@ export async function checkDesktopCat(page) {
 export async function checkMobileCat(page) {
   const cat = page.locator('[data-wcat]')
   await cat.waitFor({ state: 'visible' })
-  const floor = await cat.evaluate((el) => Math.abs(el.getBoundingClientRect().bottom - (window.innerHeight - 8)) < 2)
+  const floor = await cat.evaluate((el) => Math.abs(el.getBoundingClientRect().bottom - (document.querySelector('[data-mobile-tools]').getBoundingClientRect().top - 8)) < 2)
   const viewport = await page.evaluate(() => innerWidth === document.documentElement.clientWidth)
   const cdp = await page.context().newCDPSession(page)
   const start = await cat.boundingBox()
@@ -81,13 +81,15 @@ export async function checkMobileCat(page) {
   await touch('touchEnd', y - 144)
   const settled = await page.waitForFunction(() => {
     const el = document.querySelector('[data-wcat]')
-    return el?.dataset.form === 'cat' && Math.abs(el.getBoundingClientRect().bottom - (innerHeight - 8)) < 2
+    const support = el?.dataset.ground
+    const heading = [...document.querySelectorAll('[data-mobile-card]')].find((card) => card.dataset.window === support)?.querySelector('h2')
+    const y = support === 'floor' ? document.querySelector('[data-mobile-tools]').getBoundingClientRect().top - 8 : heading?.getBoundingClientRect().top
+    return el?.dataset.form === 'cat' && Math.abs(el.getBoundingClientRect().bottom - y) < 2
   }, null, { timeout: 20000 }).then(() => true, () => false)
-  const after = await cat.boundingBox()
   await page.screenshot({ path: 'shot-wcat-mobile.png' })
   await cdp.detach()
   return [
-    ['mobile wcat sits at the viewport bottom', floor && Math.abs(after.y + after.height - 836) < 2],
+    ['mobile wcat starts above the phone toolbar', floor],
     ['remote cursors do not widen the phone viewport', viewport],
     ['a swipe starting on wcat still scrolls', scrolled && stayedCat],
     ['long-press lifts and drags without scrolling', lifted && dragged && Math.abs(before - heldScroll) < 3],

@@ -18,6 +18,15 @@ describe('mobile stickers', () => {
   function mobile() {
     vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeEventListener() {} }))
   }
+  it('provides an always-visible toy dock and a compact on-demand sticker strip', () => {
+    mobile()
+    const view = render(<StickerLayer />)
+    expect(view.container.querySelector('[data-wcat-controls]')).toBeTruthy()
+    expect(view.container.querySelector('[data-mobile-tools]')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Stickers' }))
+    expect(view.container.querySelector('[data-sticker-dock]')?.classList.contains('mobile-sticker-strip')).toBe(true)
+    expect(screen.queryByText(/Hold to drag the cat or yarn/)).toBeNull()
+  })
   it('uses a separate collection from desktop and resets on a layout switch', () => {
     let desktop = true
     let change = () => {}
@@ -34,7 +43,7 @@ describe('mobile stickers', () => {
     mobile()
     const view = render(<StickerLayer />)
     expect(screen.queryByRole('button', { name: 'Star' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stickers' }))
     fireEvent.click(screen.getByRole('button', { name: 'Star' }))
     expect(screen.getByRole('button', { name: 'Place sticker' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -44,7 +53,7 @@ describe('mobile stickers', () => {
   it('removes only the tapped sticker while the touch eraser is active', () => {
     mobile()
     const view = render(<StickerLayer />)
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stickers' }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove stickers' }))
     fireEvent.click(view.container.querySelector('[data-sticker="one"]')!)
     expect(view.container.querySelector('[data-sticker="one"]')).toBeNull()

@@ -4,7 +4,9 @@ import { createBrain, gaze, think } from './brain'
 import { createMotion, observe } from './senses'
 import { BALL_SIZE, CAT_SIZE, REST_SECONDS, clamp, createBody, placeGently, releaseBody, shouldBeDizzy, sizeOf, step, throwVelocity } from './physics'
 import type { Body, Sample } from './physics'
-import { readWorld } from './world'
+import { carryWithPage, readWorld } from './world'
+import { phoneTilt } from './phone'
+import type { PhoneRef } from './phone'
 import { easeTail, tailPath, tailPose } from './tail'
 import { createVisit, readIcons, roomFor, visitIcon } from './exploration'
 import { createPlay, playWithYarn } from './toy-brain'
@@ -25,6 +27,7 @@ interface CatProps {
   mobile?: boolean
   label: string
   toy: YarnRef
+  phone?: PhoneRef
   roomId?: string
   initialBody?: Body
   visited: ReadonlySet<string>
@@ -33,7 +36,7 @@ interface CatProps {
   onExit: (body: Body) => void
 }
 
-export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, onEnter, onHide, onExit }: CatProps) {
+export function Cat({ mobile = false, label, toy, phone, roomId, initialBody, visited, onEnter, onHide, onExit }: CatProps) {
   const layerRef = useRef<HTMLDivElement>(null)
   const catRef = useRef<HTMLButtonElement>(null)
   const tailRef = useRef<SVGPathElement>(null)
@@ -46,7 +49,8 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
     const media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
     let reduced = media?.matches ?? false
     const root = layer.closest<HTMLElement>('[data-desktop]') ?? layer.parentElement!
-    const localWorld = () => readWorld(layer, mobile || !!roomId, reduced, !!roomId)
+    const localWorld = () => ({ ...readWorld(layer, mobile || !!roomId, reduced, !!roomId),
+      tilt: mobile && !reduced && !roomId ? phoneTilt(phone, performance.now() / 1000) : undefined })
     let world = localWorld()
     const clock = () => performance.now() / 1000
     let body = initialBody ? { ...initialBody } : createBody(world)
@@ -70,6 +74,7 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
     let disposed = false
     let tail = tailPose('sit', clock(), reduced)
     let lastPaintAt = clock()
+    let scrollingUntil = 0
     const held = () => !!gesture?.active || keyboardHeld
 
     function paint(now: number) {
@@ -77,6 +82,7 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
       el.style.transform = `translate3d(${body.x - size / 2}px, ${body.y - size}px, 0)`
       el.style.setProperty('--wcat-facing', String(brain.facing))
       el.style.setProperty('--wcat-roll', `${body.form === 'ball' ? body.angle : 0}rad`)
+      el.style.setProperty('--wcat-lean', `${mobile && !held() && ['sit', 'walk', 'follow'].includes(brain.mode) ? (world.tilt?.x ?? 0) * 9 : 0}deg`)
       el.style.setProperty('--wcat-enter', String(entering))
       const eyes = gaze(brain, body, now, reduced)
       el.style.setProperty('--wcat-eye-x', `${eyes.x}px`)
@@ -110,7 +116,8 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
     }
 
     function lift() {
-      play = { ...play, phase: 'rest', nextAt: clock() + 8 }
+      if (mobile && phone) phone.current.activeUntil = clock() + 30
+      play = { ...play, phase: 'rest', nextAt: toy.current ? clock() + 8 : 0 }
       visit = createVisit(clock(), Math.random)
       entering = 0
       motion = createMotion()
@@ -158,9 +165,12 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
     }
 
     function decide(now: number) {
-      const blocked = mobile || reduced || !!roomId || held() || !!gesture ||
+      if (mobile && brain.mode === 'nap' && ((toy.current && now - toy.current.thrownAt < 2) || Math.hypot(world.tilt?.x ?? 0, world.tilt?.y ?? 0) > 0.45)) {
+        brain = { ...brain, mode: 'wake', wakeTo: 'sit', until: now + 0.65, awakeAt: now, lookUntil: 0, attentionUntil: 0 }
+      }
+      const blocked = reduced || !!roomId || held() || !!gesture || now < scrollingUntil ||
         ['pet', 'poke', 'dizzy', 'nap', 'wake', 'peek', 'inspect', 'enter'].includes(brain.mode) ||
-        now - Math.max(pokedAt, motion.pettedAt) < 0.3
+        now - Math.max(pokedAt, motion.pettedAt, phone?.current.petAt ?? -Infinity) < 0.3
       const playing = playWithYarn(play, body, toy.current, world, now, blocked, Math.random)
       play = playing.play
       body = playing.body
@@ -175,13 +185,16 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
         const facing = brain.facing === 1 ? -1 : 1
         brain = { ...createBrain(now, Math.random), facing, reactedAt, until: now + 3, lookAfter: now + 4 }
       }
-      ({ body, brain } = think(brain, body, { now, world, pointer, mobile, random: Math.random,
-        signals: { teasedAt: motion.teasedAt, pettedAt: motion.pettedAt, pokedAt } }))
+      const engaged = !!toy.current || now < (phone?.current.activeUntil ?? 0)
+      const steering = mobile && !toy.current && Math.abs(world.tilt?.x ?? 0) > 0.12
+      ;({ body, brain } = think(brain, body, { now, world, pointer, mobile: mobile && (!engaged || steering), random: Math.random,
+        signals: { teasedAt: motion.teasedAt, pettedAt: Math.max(motion.pettedAt, phone?.current.petAt ?? -Infinity), pokedAt } }))
     }
 
     function poke() {
       if (disposed || held() || gesture || body.form !== 'cat') return
       pokedAt = clock()
+      if (mobile && phone) phone.current.activeUntil = pokedAt + 30
       visit = createVisit(pokedAt, Math.random)
       entering = 0
       motion = createMotion()
@@ -274,7 +287,9 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
       const dt = Math.min(0.25, Math.max(0, now - previousTime))
       previousTime = now
       if (roomId && roomFor(root, roomId) !== layer.parentElement) { onHide(); return }
-      world = localWorld()
+      const nextWorld = localWorld()
+      if (mobile && !held()) body = carryWithPage(body, world, nextWorld)
+      world = nextWorld
       const wasVisiting = visit.phase !== 'idle'
       const toyReady = toy.current && !toy.current.held && now - toy.current.thrownAt < 2 && now >= play.nextAt
       const busy = mobile || reduced || !!roomId || !!gesture || held() || pointer.pressed || play.phase !== 'rest' || toyReady ||
@@ -307,8 +322,16 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
       if (!held()) {
         // A mouse press pins the cat until the threshold or release so it
         // cannot walk away while somebody is trying to pick it up.
-        if (!gesture && visit.phase === 'idle') decide(now)
+        if (!gesture && visit.phase === 'idle' && now >= scrollingUntil) decide(now)
         else body.vx = 0
+        if (mobile && !reduced && !gesture && now >= scrollingUntil && !toy.current && body.form === 'cat' && body.ground && ['sit', 'walk', 'follow'].includes(brain.mode) && Math.abs(world.tilt?.x ?? 0) > 0.12) {
+          body.vx = world.tilt!.x * 110
+          brain.mode = 'walk'
+          brain.facing = body.vx < 0 ? -1 : 1
+          brain.until = now + 0.5
+          brain.target = { x: body.x + world.tilt!.x * 140, y: body.y + world.tilt!.y * 100 }
+          brain.lookUntil = now + 0.2
+        }
         const airborne = !body.ground
         if (visit.phase !== 'hop') body = step(body, dt, world)
         if (airborne && body.ground) squashUntil = now + 0.12
@@ -337,6 +360,7 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
       if (!document.hidden) frame = requestAnimationFrame(tick)
     }
     function onMotion() { reduced = media?.matches ?? false; if (reduced) finish(true) }
+    function onScroll() { scrollingUntil = clock() + 0.18 }
 
     el.addEventListener('pointerdown', onDown)
     el.addEventListener('pointermove', onMove)
@@ -351,6 +375,7 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
     el.addEventListener('blur', cancel)
     window.addEventListener('pointermove', onPointer, { passive: true })
     window.addEventListener('blur', cancel)
+    if (mobile) window.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('pointerleave', onLeave)
     document.addEventListener('visibilitychange', onVisibility)
     media?.addEventListener('change', onMotion)
@@ -373,11 +398,12 @@ export function Cat({ mobile = false, label, toy, roomId, initialBody, visited, 
       el.removeEventListener('blur', cancel)
       window.removeEventListener('pointermove', onPointer)
       window.removeEventListener('blur', cancel)
+      window.removeEventListener('scroll', onScroll)
       document.removeEventListener('pointerleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
       media?.removeEventListener('change', onMotion)
     }
-  }, [mobile, roomId, initialBody, toy, visited, onEnter, onHide, onExit])
+  }, [mobile, roomId, initialBody, toy, phone, visited, onEnter, onHide, onExit])
 
   return (
     <div ref={layerRef} className={`wcat-layer${mobile ? ' wcat-mobile' : ''}`} data-wcat-layer>

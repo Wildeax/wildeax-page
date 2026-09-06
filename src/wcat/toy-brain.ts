@@ -8,6 +8,7 @@ interface ToyPlay {
   nextAt: number
   throwAt: number
   pounceAt: number
+  movingAt: number
 }
 export interface PlayResult {
   play: ToyPlay
@@ -19,7 +20,7 @@ export interface PlayResult {
   ended: boolean
 }
 
-export function createPlay(): ToyPlay { return { phase: 'rest', until: 0, nextAt: 0, throwAt: -Infinity, pounceAt: 0 } }
+export function createPlay(): ToyPlay { return { phase: 'rest', until: 0, nextAt: 0, throwAt: -Infinity, pounceAt: 0, movingAt: 0 } }
 
 export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState | null, world: World, now: number, blocked: boolean, random: () => number): PlayResult {
   const play = { ...previous }
@@ -28,12 +29,13 @@ export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState |
   const facing = target.x >= body.x ? 1 : -1
   const result = (mode: PlayResult['mode'] = null, swat: PlayResult['swat'] = 0, ended = false): PlayResult => ({ play, body, mode, target, facing, swat, ended })
   const active = play.phase !== 'rest'
+  if (yarn && (yarn.held || Math.hypot(yarn.body.vx, yarn.body.vy) > 25)) play.movingAt = now
   if (active && yarn?.held && !blocked && now < play.until) {
     if (body.ground) body.vx = 0
     return result('follow')
   }
   const unavailable = blocked || !yarn || yarn.held || world.reducedMotion || body.form !== 'cat'
-  if (active && (unavailable || now >= play.until)) {
+  if (active && (unavailable || now >= play.until || now - play.movingAt > 2.25)) {
     play.phase = 'rest'
     play.nextAt = now + 10 + random() * 8
     if (body.ground) body.vx = 0
@@ -46,10 +48,35 @@ export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState |
     play.until = now + 7 + random() * 6
     play.throwAt = yarn.thrownAt
     play.pounceAt = now
+    play.movingAt = now
   }
   const swat = Math.hypot(target.x - body.x, target.y - body.y) < 42 && now - yarn.pawedAt >= 0.8 ? facing : 0
   const surface = support(body, world)
   if (!surface) return result('pounce', swat)
+  // A lower toy needs a route OFF this perch. A ballistic hop aimed beneath
+  // the same one-way top simply lands back on it, over and over.
+  if (surface.id !== 'floor' && target.y > body.y + CAT_SIZE * 1.5) {
+    const exits = [surface.left - CAT_SIZE / 2, surface.right + CAT_SIZE / 2]
+      .filter((x) => x >= CAT_SIZE / 2 && x <= world.width - CAT_SIZE / 2)
+      .sort((a, b) => Math.abs(a - body.x) + Math.abs(a - target.x) * 0.4 - Math.abs(b - body.x) - Math.abs(b - target.x) * 0.4)
+    if (exits.length) {
+      play.phase = 'chase'
+      body.vx = Math.sign(exits[0] - body.x) * 145
+      return { ...result('follow', swat), facing: body.vx < 0 ? -1 : 1 }
+    }
+    // Phone headings can span every reachable x. Crouch and deliberately
+    // drop through that one-way top, moving the feet just beyond its plane.
+    // Solid selection walls never use this drop-through route.
+    if (!world.obstacles?.some((wall) => wall.id === surface.id)) {
+      body.vx = 0
+      if (play.phase !== 'crouch') { play.phase = 'crouch'; play.pounceAt = now + 0.28 }
+      if (now < play.pounceAt) return result('crouch')
+      const fallTime = Math.sqrt(2 * (target.y - body.y) / GRAVITY)
+      body = { ...body, y: surface.y + 1, ground: null, vy: 80, vx: clamp((target.x - body.x) / fallTime, -220, 220) }
+      play.phase = 'pounce'
+      return result('pounce')
+    }
+  }
   if (play.phase === 'pounce') { play.phase = 'chase'; play.pounceAt = now + 0.7 }
   if (play.phase === 'crouch') {
     body.vx = 0

@@ -41,7 +41,8 @@ export function stepYarn(yarn: YarnState, dt: number, world: World): YarnState {
       const vx = (p.x - p.px) * Math.pow(0.985, h * 60)
       const vy = (p.y - p.py) * Math.pow(0.985, h * 60)
       p.px = p.x; p.py = p.y
-      p.x += vx; p.y += vy + 860 * h * h
+      p.x += vx + (world.tilt?.x ?? 0) * 720 * h * h
+      p.y += vy + (860 + (world.tilt?.y ?? 0) * 300) * h * h
     }
     for (let pass = 0; pass < 8; pass++) {
       points[0] = { x: body.x - 8, y: body.y - 18, px: body.x - 8, py: body.y - 18 }

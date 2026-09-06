@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { batYarn, createYarn, releaseYarn, stepYarn, STRING_LINK } from './yarn'
-import { createBody } from './physics'
+import { createBody, step } from './physics'
 import { createPlay, playWithYarn } from './toy-brain'
 
 const world = { width: 800, floor: 600, platforms: [] }
@@ -66,9 +66,42 @@ describe('private yarn physics', () => {
 })
 
 describe('cat interest in the yarn', () => {
+  it.each([
+    { id: 'window', left: 180, right: 600, y: 280 },
+    { id: 'full-width-card', left: 16, right: 784, y: 280 },
+  ])('descends from $id to pursue a toy on the floor', (platform) => {
+    const scene = { ...world, platforms: [platform] }
+    let body = { ...createBody(scene), x: 400, y: platform.y, ground: platform.id as string | null }
+    let play = createPlay()
+    const toy = createYarn(scene, 0)
+    toy.body.x = 450
+    let lowest = body.y
+    for (let frame = 0; frame < 180; frame++) {
+      const now = frame / 60
+      // A moving toy keeps inviting pursuit, without changing its height.
+      const result = playWithYarn(play, body, { ...toy, body: { ...toy.body, vx: 30 } }, scene, now, false, random)
+      play = result.play
+      body = step(result.body, 1 / 60, scene)
+      lowest = Math.max(lowest, body.y)
+    }
+    expect(lowest).toBeGreaterThan(560)
+  })
+
+  it('loses interest in stationary yarn early and does not restart on its own', () => {
+    const toy = createYarn(world, 0)
+    const body = createBody(world)
+    const first = playWithYarn(createPlay(), body, toy, world, 0, false, random)
+    const quiet = playWithYarn(first.play, body, toy, world, 3, false, random)
+    expect(quiet.ended).toBe(true)
+    expect(quiet.mode).toBeNull()
+    expect(playWithYarn(quiet.play, body, toy, world, 30, false, random).mode).toBeNull()
+    expect(playWithYarn(quiet.play, body, { ...toy, thrownAt: 30, body: { ...toy.body, vx: 200 } }, world, 30, false, random).mode).not.toBeNull()
+  })
+
   it('chases a fresh throw, then loses interest on time despite more throws', () => {
     const body = createBody(world)
     const toy = createYarn(world, 1)
+    toy.body.vx = 120
     const first = playWithYarn(createPlay(), body, toy, world, 1, false, random)
     expect(first.mode).toBe('follow')
     expect(first.body.vx).toBeGreaterThan(0)

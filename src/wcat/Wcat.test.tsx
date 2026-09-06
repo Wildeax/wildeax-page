@@ -55,7 +55,7 @@ describe('wcat interaction', () => {
   })
 
   it('lets a touch swipe pass, but holds and drags the yarn after a long press', () => {
-    const view = render(<div data-desktop><div data-sticker-dock /><Wcat mobile label="wcat" /></div>)
+    const view = render(<div data-mobile><div data-wcat-controls /><Wcat mobile label="wcat" /></div>)
     fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
     const toy = view.container.querySelector<HTMLElement>('[data-yarn]')!
     const down = () => fireEvent.pointerDown(toy, { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 480, clientY: 618 })
@@ -63,7 +63,7 @@ describe('wcat interaction', () => {
     fireEvent.pointerMove(toy, { pointerId: 1, pointerType: 'touch', clientX: 480, clientY: 590 })
     act(() => vi.advanceTimersByTime(300))
     expect(toy.dataset.held).toBe('false')
-    expect(cat().dataset.toyInterest).toBe('false')
+    expect(cat().dataset.toyInterest).toBe('true')
     down()
     act(() => vi.advanceTimersByTime(300))
     expect(toy.dataset.held).toBe('true')
@@ -167,9 +167,38 @@ describe('wcat interaction', () => {
     fireEvent.keyDown(cat(), { key: ' ' })
     for (let i = 0; i < 15; i++) fireEvent.keyDown(cat(), { key: 'ArrowRight', shiftKey: true })
     fireEvent.keyDown(cat(), { key: 'Escape' })
-    act(() => vi.advanceTimersByTime(46000))
+    act(() => vi.advanceTimersByTime(1000))
+    // Skip the newly enabled post-drag roaming, keeping this test about the
+    // actual sleep artwork at the edge rather than the intervening walk.
+    vi.spyOn(performance, 'now').mockReturnValue(46000)
+    act(() => vi.advanceTimersByTime(32))
     expect(cat().dataset.mode).toBe('nap')
     expect(cat().dataset.sleepSide).toBe('left')
+  })
+
+  it('offers direct phone petting and short yarn play followed by boredom', () => {
+    const view = render(<div data-mobile><div data-wcat-controls /><Wcat mobile label="wcat" /></div>)
+    fireEvent.click(screen.getByRole('button', { name: 'Pet' }))
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.mode).toBe('pet')
+    act(() => vi.advanceTimersByTime(1700))
+    fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.toyInterest).toBe('true')
+    act(() => vi.advanceTimersByTime(11000))
+    expect(cat().dataset.toyInterest).toBe('false')
+    view.unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('can discover newly spawned yarn just after being placed', () => {
+    render(<div data-mobile><div data-wcat-controls /><Wcat mobile label="wcat" /></div>)
+    fireEvent.keyDown(cat(), { key: ' ' })
+    fireEvent.keyDown(cat(), { key: 'Escape' })
+    act(() => vi.advanceTimersByTime(1000))
+    fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.toyInterest).toBe('true')
   })
 
   it.each(['mouse', 'touch'])('pokes on a %s click or tap without lifting', (type) => {

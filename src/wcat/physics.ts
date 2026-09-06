@@ -7,7 +7,7 @@ const BOUNCE = 0.72
 
 export interface Platform { id: string; left: number; right: number; y: number }
 export interface Obstacle extends Platform { bottom: number }
-export interface World { width: number; floor: number; platforms: readonly Platform[]; obstacles?: readonly Obstacle[]; reducedMotion?: boolean }
+export interface World { width: number; floor: number; platforms: readonly Platform[]; obstacles?: readonly Obstacle[]; reducedMotion?: boolean; ballPlatforms?: boolean; tilt?: { x: number; y: number } }
 export interface Body {
   /** Horizontal center and feet, in layer coordinates. Velocities are px/s. */
   x: number; y: number; vx: number; vy: number
@@ -71,12 +71,15 @@ function integrate(body: Body, dt: number, world: World): Body {
   const radius = size / 2
   const bounce = ball && !world.reducedMotion ? BOUNCE : 0
   const grounded = body.vy === 0 && !!support(body, world)
+  const tilt = ball && !world.reducedMotion ? world.tilt : undefined
+  if (tilt) next.vx = clamp(next.vx + tilt.x * 900 * dt, -1800, 1800)
+  const gravity = GRAVITY + (tilt?.y ?? 0) * 700
   if (ball && world.reducedMotion) { next.vx = 0; next.vy = Math.max(0, next.vy) }
   next.ground = grounded ? body.ground : null
   next.x += next.vx * dt
   if (!grounded) {
-    next.y += next.vy * dt + GRAVITY * dt * dt / 2
-    next.vy += GRAVITY * dt
+    next.y += next.vy * dt + gravity * dt * dt / 2
+    next.vy += gravity * dt
   }
   const impact = (speed: number) => { if (ball && Math.abs(speed) >= 450) next.hardImpacts = Math.min(20, next.hardImpacts + 1) }
   if (next.x < radius) { impact(next.vx); next.x = radius; next.vx = Math.abs(next.vx) * bounce }
@@ -109,14 +112,19 @@ function integrate(body: Body, dt: number, world: World): Body {
 
   // One-way platforms: the feet must cross the top on the way down. Sort by
   // crossing height so the DOM order cannot make the cat tunnel through one.
-  if (!ball && !grounded && next.vy >= 0) {
+  if ((!ball || world.ballPlatforms) && !grounded && next.vy >= 0) {
     const crossed = world.platforms.filter((p) => {
       if (p.y < body.y || p.y > next.y || p.y > world.floor) return false
       const t = (p.y - body.y) / (next.y - body.y || 1)
       const x = body.x + (next.x - body.x) * t
       return x >= p.left && x <= p.right
     }).sort((a, b) => a.y - b.y)[0]
-    if (crossed) { next.y = crossed.y; next.vy = 0; next.ground = crossed.id }
+    if (crossed) {
+      impact(next.vy)
+      next.y = crossed.y
+      next.vy = ball && next.vy > 60 ? -next.vy * bounce : 0
+      next.ground = next.vy === 0 ? crossed.id : null
+    }
   }
   if (next.y >= world.floor) {
     impact(next.vy)

@@ -22,7 +22,11 @@ const noDesktopScroll = async (page) => {
   const d = await dimensions(page)
   return d.pageHeight === d.height && d.pageWidth === d.width && d.scroll === 0
 }
-const waitSticker = (page, kind) => page.locator(`[data-sticker-kind="${kind}"]`).waitFor({ state: 'attached', timeout: 15000 })
+const waitSticker = (page, kind) => page.locator(`[data-sticker-kind="${kind}"]`).waitFor({ state: 'attached', timeout: 15000 }).catch(async (error) => {
+  console.log('sticker wait diagnostics', { url: page.url(), errors, body: (await page.locator('body').innerText()).slice(-1600) })
+  await page.screenshot({ path: 'shot-sticker-wait-failed.png' })
+  throw error
+})
 const serveLegacy = async (page) => {
   // playhtml also namespaces by host. Serve the old site's real document and
   // bundles at the target origin in these two isolated test pages, so the old
@@ -37,7 +41,7 @@ const serveLegacy = async (page) => {
   })
 }
 const place = async (page, kind, x, y, mobile = false) => {
-  if (mobile) await page.getByRole('button', { name: 'Play', exact: true }).tap()
+  if (mobile) await page.getByRole('button', { name: 'Stickers', exact: true }).tap()
   await page.getByRole('button', { name: kind, exact: true }).click()
   await page.getByRole('button', { name: 'Place sticker', exact: true }).click({ position: { x, y } })
 }
@@ -108,7 +112,7 @@ try {
   await desktop.setViewportSize({ width: 390, height: 844 })
   await waitSticker(desktop, 'heart')
   check('resizing into mobile swaps collections without leaking desktop data', await desktop.locator('[data-sticker]').count() === 1 && await desktop.locator('[data-sticker-layer]').getAttribute('data-sticker-scope') === 'mobile')
-  await desktop.getByRole('button', { name: 'Play', exact: true }).click()
+  await desktop.getByRole('button', { name: 'Stickers', exact: true }).click()
   check('the yarn toggle reconnects after changing layout', await desktop.locator('[data-yarn-toggle]').isVisible())
   await desktop.setViewportSize({ width: 1365, height: 711 })
   await waitSticker(desktop, 'fire')
@@ -120,12 +124,12 @@ try {
   await phone.evaluate(() => scrollTo(0, 2200))
   const stickerDrag = await touchDrag(phone, heart)
   check('a held phone sticker drags without scrolling the page', stickerDrag.moved > 80 && Math.abs(stickerDrag.scrollDelta) < 3, stickerDrag)
-  await phone.getByRole('button', { name: 'Play', exact: true }).tap()
+  await phone.getByRole('button', { name: 'Stickers', exact: true }).tap()
   await phone.getByRole('button', { name: 'Remove stickers', exact: true }).tap()
   await heart.tap()
   check('touch eraser removes only the mobile sticker', await phone.locator('[data-sticker]').count() === 0)
   await phone.getByRole('button', { name: 'Done', exact: true }).tap()
-  await phone.getByRole('button', { name: 'Play', exact: true }).tap()
+  await phone.getByRole('button', { name: 'Stickers', exact: true }).tap()
   await phone.getByRole('button', { name: 'Star', exact: true }).tap()
   await phone.getByRole('button', { name: 'Cancel', exact: true }).tap()
   check('placement can be cancelled without adding a sticker', await phone.locator('[data-sticker]').count() === 0 && await phone.getByRole('button', { name: 'Place sticker' }).count() === 0)
@@ -156,13 +160,13 @@ try {
     await page.waitForFunction(() => { const r = document.querySelector('#mobile-splitwars').getBoundingClientRect(); return r.top >= 0 && r.top < 180 })
     const project = await page.locator('#mobile-splitwars').evaluate((el) => ({ top: el.getBoundingClientRect().top, focused: document.activeElement === el }))
     check(`${prefix}: project rows navigate to actual project content`, project.top >= 0 && project.top < 180 && project.focused, project)
-    await page.getByRole('button', { name: 'Play', exact: true }).tap()
+    await page.getByRole('button', { name: 'Stickers', exact: true }).tap()
     const panel = await page.locator('#play-panel').boundingBox()
     const touchTargets = await page.locator('[data-sticker-dock] button').evaluateAll((buttons) => buttons.every((el) => { const r = el.getBoundingClientRect(); return r.width >= 44 && r.height >= 44 }))
     check(`${prefix}: expanded toys fit the screen with touch-sized buttons`, panel.x >= 0 && panel.y >= 0 && panel.x + panel.width <= viewport.width && panel.y + panel.height <= viewport.height && touchTargets)
     await page.screenshot({ path: `shot-mobile-tray-${viewport.width}.png` })
     await page.locator('[data-yarn-toggle]').tap()
-    await page.getByRole('button', { name: 'Close toys', exact: true }).tap()
+    await page.getByRole('button', { name: 'Stickers', exact: true }).tap()
     await page.locator('[data-yarn]').waitFor({ state: 'visible' })
     check(`${prefix}: private yarn survives collapsing the tray`, await page.locator('[data-yarn]').isVisible())
     if (viewport.width === 390) {
@@ -171,16 +175,16 @@ try {
       const catDrag = await touchDrag(page, page.locator('[data-wcat]'))
       check('phone cat supports a real held touch drag without panning', catDrag.moved > 80 && Math.abs(catDrag.scrollDelta) < 3, catDrag)
       await page.setViewportSize({ width: 390, height: 650 })
-      const followsFloor = await page.waitForFunction(() => { const cat = document.querySelector('[data-wcat]'); return cat.dataset.form === 'cat' && Math.abs(cat.getBoundingClientRect().bottom - (innerHeight - 8)) < 2 }, null, { timeout: 15000 }).then(() => true, () => false)
+      const followsFloor = await page.waitForFunction(() => { const cat = document.querySelector('[data-wcat]'); return cat.dataset.form === 'cat' && cat.getBoundingClientRect().bottom <= document.querySelector('[data-mobile-tools]').getBoundingClientRect().top - 6 }, null, { timeout: 15000 }).then(() => true, () => false)
       check('cat stays on the visible floor after phone viewport height changes', followsFloor)
       await page.setViewportSize(viewport)
     }
-    await page.getByRole('button', { name: 'Play', exact: true }).tap()
+    await page.getByRole('button', { name: 'Stickers', exact: true }).tap()
     await page.locator('[data-yarn-toggle]').tap()
     check(`${prefix}: yarn can be put away without a right-click`, await page.locator('[data-yarn]').count() === 0)
-    await page.getByRole('button', { name: 'Close toys', exact: true }).tap()
+    await page.getByRole('button', { name: 'Stickers', exact: true }).tap()
     await page.getByRole('button', { name: 'Switch language' }).tap()
-    check(`${prefix}: mobile tools translate into Spanish`, await page.getByRole('button', { name: 'Jugar', exact: true }).isVisible())
+    check(`${prefix}: mobile tools translate into Spanish`, await page.getByRole('button', { name: 'Mimos', exact: true }).isVisible())
     await page.close()
   }
   check('no browser runtime errors', errors.length === 0, errors)

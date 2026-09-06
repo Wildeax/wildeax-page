@@ -253,7 +253,11 @@ export function Desktop() {
     return (
       <main data-mobile className="mobile-page relative z-10 mx-auto flex max-w-xl flex-col gap-4">
         <MobileHeader onNavigate={openWindow} />
-        <Wcat mobile label={t('os.wcat.help')} toyLabel={t('os.wcat.yarn')} toyHelp={t('os.wcat.yarnHelp')} />
+        <Wcat mobile label={t('os.phone.catHelp')} toyLabel={t('os.wcat.yarn')} toyHelp={t('os.phone.yarnHelp')}
+          phoneLabels={{ yarn: t('os.phone.yarn'), pet: t('os.phone.pet'), tilt: t('os.phone.tilt'),
+            enable: t('os.phone.enable'), disable: t('os.phone.disable'), recenter: t('os.phone.recenter'), off: '',
+            asking: t('os.phone.asking'), waiting: t('os.phone.waiting'), on: t('os.phone.on'),
+            denied: t('os.phone.denied'), unavailable: t('os.phone.unavailable'), reduced: t('os.phone.reduced') }} />
         {WINDOWS.map((w) => (
           <section key={w.id} id={`mobile-${w.id}`} data-window={w.id} data-mobile-card
             tabIndex={-1} aria-labelledby={`mobile-title-${w.id}`}
