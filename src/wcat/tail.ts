@@ -1,5 +1,5 @@
-// Two joined cubic curves. The root stays attached; the middle and tip bend
-// independently. Coordinates are local to the small SVG, not the desktop.
+// Flat, constant-width ink. The base sits behind the body at the rear hip.
+// Only the outer bend swishes; no moving root, underside loop or depth turn.
 export type TailPose = readonly number[]
 
 export function tailPose(mode: string, now: number, reduced = false): TailPose {
@@ -8,21 +8,21 @@ export function tailPose(mode: string, now: number, reduced = false): TailPose {
   const flick = Math.sin(t * 8) * Math.pow(Math.max(0, Math.sin(t * 0.7)), 8)
   switch (mode) {
     case 'enter':
-    case 'nap': return [25, 49, 13, 49, 18, 45, 29, 43, 31, 47]
-    case 'wake': return [26, 48, 13, 44, 15, 35, 20, 28, 13, 28]
-    case 'pet': return [26, 48, 13, 40, 15 + sway, 23, 23, 9, 12 + sway * 3, 11]
-    case 'poke': return [27, 46, 16, 35, 16, 21, 23, 5, 11, 8]
+    case 'nap': return [30, 30, 15, 34, 10, 31, 6, 27, 5, 30]
+    case 'wake': return [30, 30, 14, 33, 12, 26, 15, 22, 8, 21]
+    case 'pet': return [30, 30, 12, 32, 12, 18, 19 + sway, 7, 9 + sway * 2, 10]
+    case 'poke': return [30, 30, 13, 30, 12, 17, 18, 4, 8, 7]
     case 'stalk':
-    case 'crouch': return [26, 49, 12, 47, 8, 40, 6, 36, 11 + Math.sin(t * 14) * 2.8, 34]
+    case 'crouch': return [30, 30, 14, 33, 8, 29, 6, 23, 5 + Math.sin(t * 12) * 1.5, 25]
     case 'walk':
-    case 'follow': return [24, 48, 9, 43, 10, 32 + Math.sin(t * 7) * 3, 9, 23, 6 + Math.sin(t * 7 - 0.7) * 3, 25]
+    case 'follow': return [30, 30, 13, 33, 10, 23, 12, 14, 6 + Math.sin(t * 5) * 2, 17]
     case 'jump':
     case 'pounce':
-    case 'fall': return [22, 47, 9, 45, 5, 36, 9, 30, 3, 29]
+    case 'fall': return [30, 30, 15, 32, 8, 25, 6, 20, 3, 22]
     case 'inspect':
-    case 'peek': return [25, 48, 10, 37, 12, 25, 19, 14, 11 + sway, 17]
-    case 'dizzy': return [24, 48, 10 + sway * 3, 41, 14 + sway * 2, 31, 20 + sway * 5, 21, 7 + sway * 5, 25 + sway * 5]
-    default: return [24, 48, 10 + sway * 2, 40, 14 + sway, 28, 20, 16, 8 + sway * 4 + flick * 2, 20 + sway * 2]
+    case 'peek': return [30, 30, 13, 32, 12, 22, 19, 13, 10 + sway, 16]
+    case 'dizzy': return [30, 30, 13, 33, 10, 26, 12 + sway * 2, 19, 5 + sway * 2.5, 23]
+    default: return [30, 30, 13, 33, 12, 24, 16 + sway, 14, 8 + sway * 2 + flick, 17]
   }
 }
 
@@ -33,5 +33,5 @@ export function easeTail(previous: TailPose, target: TailPose, dt: number): Tail
 
 export function tailPath(pose: TailPose): string {
   const values = pose.map((n) => n.toFixed(2))
-  return `M40 44 C${values.slice(0, 6).join(' ')} S${values.slice(6).join(' ')}`
+  return `M40 30 C${values.slice(0, 6).join(' ')} S${values.slice(6).join(' ')}`
 }

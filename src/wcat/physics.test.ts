@@ -9,6 +9,41 @@ function advance(body: Body, seconds: number, hz = 60, bounds = world): Body {
 }
 
 describe('wcat physics', () => {
+  it.each([
+    { x: 330, y: 300, vx: 1400, vy: 0, axis: 'vx' as const, sign: -1 },
+    { x: 510, y: 300, vx: -1400, vy: 0, axis: 'vx' as const, sign: 1 },
+    { x: 410, y: 205, vx: 0, vy: 900, axis: 'vy' as const, sign: -1 },
+    { x: 410, y: 540, vx: 0, vy: -1000, axis: 'vy' as const, sign: 1 },
+  ])('bounces off a live selection wall: $axis / $sign', (input) => {
+    const obstacle = { id: 'selection', left: 360, right: 480, y: 220, bottom: 500 }
+    const bounds = { ...world, obstacles: [obstacle], platforms: [obstacle] }
+    const next = step({ ...createBody(world), ...input, form: 'ball', ground: null }, 0.025, bounds)
+    expect(Math.sign(next[input.axis])).toBe(input.sign)
+  })
+
+  it('supports the cat and a resting ball on top, then drops them when selection ends', () => {
+    const obstacle = { id: 'selection', left: 200, right: 600, y: 300, bottom: 500 }
+    const bounds = { ...world, obstacles: [obstacle], platforms: [obstacle] }
+    for (const form of ['cat', 'ball'] as const) {
+      const perched = advance({ ...createBody(world), x: 400, y: 298, vy: 20, form, ground: null }, 2, 60, bounds)
+      expect(perched.ground).toBe('selection')
+      expect(perched.y).toBe(300)
+      if (form === 'ball') expect(perched.rest).toBeGreaterThan(0.3)
+      const falling = step(perched, 0.1, world)
+      expect(falling.ground).toBeNull()
+      expect(falling.y).toBeGreaterThan(300)
+    }
+  })
+
+  it('pushes a cat out safely when a selection grows across it', () => {
+    const obstacle = { id: 'selection', left: 300, right: 500, y: 200, bottom: 600 }
+    const bounds = { ...world, obstacles: [obstacle], platforms: [obstacle] }
+    const next = step({ ...createBody(world), x: 310, form: 'ball' }, 0.016, bounds)
+    expect(next.x + 18).toBeLessThanOrEqual(300)
+    expect(next.y).toBeLessThanOrEqual(600)
+    expect(Number.isFinite(next.vx + next.vy)).toBe(true)
+  })
+
   it('integrates gravity without mutating the input', () => {
     const body = { ...createBody(world), y: 100, ground: null }
     const next = step(body, 0.01, world)

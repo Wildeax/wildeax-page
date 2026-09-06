@@ -4,6 +4,23 @@ import { readWorld } from './world'
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks() })
 
+it('reads a live selection as a solid rectangle and temporary perch', () => {
+  const root = document.createElement('div')
+  const layer = document.createElement('div')
+  const selection = document.createElement('div')
+  selection.dataset.marquee = ''
+  root.append(layer, selection)
+  document.body.append(root)
+  vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue(new DOMRect(20, 30, 800, 644))
+  vi.spyOn(selection, 'getBoundingClientRect').mockReturnValue(new DOMRect(220, 230, 180, 400))
+  expect(readWorld(layer, false, false)).toMatchObject({
+    obstacles: [{ id: 'selection', left: 200, right: 380, y: 200, bottom: 600 }],
+    platforms: [{ id: 'selection', left: 200, right: 380, y: 200 }],
+  })
+  selection.remove()
+  expect(readWorld(layer, false, false).obstacles).toEqual([])
+})
+
 it('keeps a room cat above an overlapping sticker dock', () => {
   const root = document.createElement('div')
   root.dataset.desktop = ''

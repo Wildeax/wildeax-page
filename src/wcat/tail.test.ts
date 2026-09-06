@@ -2,6 +2,21 @@ import { describe, expect, it } from 'vitest'
 import { easeTail, tailPath, tailPose } from './tail'
 
 describe('wcat vector tail', () => {
+  it('attaches at the back and keeps a fixed base without curling under the feet', () => {
+    for (const mode of ['sit', 'walk', 'follow', 'stalk', 'crouch', 'pet', 'poke', 'nap', 'wake', 'fall', 'jump', 'pounce', 'dizzy', 'peek', 'inspect', 'enter']) {
+      const start = tailPose(mode, 0)
+      for (let t = 0; t <= 20; t += 0.1) {
+        const pose = tailPose(mode, t)
+        expect(tailPath(pose)).toMatch(/^M40 30 C30\.00 30\.00 /)
+        expect(pose.slice(0, 4)).toEqual(start.slice(0, 4))
+        // Convex-hull bound: neither cubic can cross below this local height.
+        // Including the 3px stroke, it stays above the cat's 44px feet.
+        for (let i = 1; i < pose.length; i += 2) expect(pose[i]).toBeLessThanOrEqual(37)
+        expect(2 * pose[5] - pose[3]).toBeLessThanOrEqual(37)
+      }
+    }
+  })
+
   it('bends its curve over time instead of rotating a rigid tail', () => {
     const first = tailPath(tailPose('sit', 0))
     expect(first).toContain('C')

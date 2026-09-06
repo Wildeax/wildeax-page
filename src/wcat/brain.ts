@@ -16,6 +16,7 @@ export interface Brain {
   wakeTo: 'sit' | 'pet' | 'poke'
   attentionUntil: number
   edgeChecked: string | null
+  jumpTarget?: { id: string; x: number }
 }
 export interface Pointer { x: number; y: number; movedAt: number; inside: boolean; pressed?: boolean }
 export interface Input { now: number; world: World; pointer: Pointer; mobile: boolean; random: () => number; signals?: Signals }
@@ -55,6 +56,14 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
   const surface = support(body, world)
   if (!surface) {
     body.ground = null
+    const wall = brain.mode === 'jump' && world.obstacles?.find((p) => p.id === brain.jumpTarget?.id)
+    if (wall && brain.jumpTarget) {
+      // Clear a solid side first. Window tops are one-way, but a live
+      // selection rectangle cannot be crossed from underneath or sideways.
+      const x = clamp(brain.jumpTarget.x, wall.left + CAT_SIZE / 2, wall.right - CAT_SIZE / 2)
+      const time = (-body.vy + Math.sqrt(body.vy ** 2 + 2 * GRAVITY * Math.max(0, wall.y - body.y))) / GRAVITY
+      body.vx = body.y > wall.y ? 0 : clamp((x - body.x) / Math.max(0.1, time), -340, 340)
+    }
     if (brain.mode !== 'pounce' && (brain.mode !== 'jump' || body.vy >= 0)) brain.mode = 'fall'
     return done()
   }
@@ -94,7 +103,7 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     body.vx = 0
     return done()
   }
-  if (['jump', 'fall', 'ball', 'pounce'].includes(brain.mode)) { sit(); return done() }
+  if (['jump', 'fall', 'ball', 'pounce'].includes(brain.mode)) { brain.jumpTarget = undefined; sit(); return done() }
 
   const distance = Math.hypot(pointer.x - body.x, pointer.y - body.y)
   if (brain.mode === 'nap') {
@@ -199,6 +208,10 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     : Math.abs(a.x - body.x) - Math.abs(b.x - body.x))
   if (targets[0] && (atEdge || surface.id === 'floor')) {
     body = jump(body, targets[0].platform, targets[0].x)
+    if (world.obstacles?.some((wall) => wall.id === targets[0].platform.id)) {
+      brain.jumpTarget = { id: targets[0].platform.id, x: targets[0].x }
+      body.vx = 0
+    } else brain.jumpTarget = undefined
     brain.mode = 'jump'
   } else if (atEdge) {
     if (surface.id === 'floor') {

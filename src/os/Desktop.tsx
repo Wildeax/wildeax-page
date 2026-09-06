@@ -250,7 +250,7 @@ export function Desktop() {
     return (
       <div className="relative z-10 mx-auto flex max-w-xl flex-col gap-4 px-4 py-6">
         <MobileHeader />
-        <Wcat mobile label={t('os.wcat.help')} />
+        <Wcat mobile label={t('os.wcat.help')} toyLabel={t('os.wcat.yarn')} toyHelp={t('os.wcat.yarnHelp')} />
         {WINDOWS.map((w) => (
           <div key={w.id} className="h-[min(70vh,520px)]">
             <Window id={w.id} title={t(w.titleKey)} hidden={false} onClose={() => {}} onFocus={() => {}}>
@@ -402,7 +402,7 @@ export function Desktop() {
         </>
       )}
 
-      <Wcat label={t('os.wcat.help')} insideLabel={t('os.wcat.inside')} />
+      <Wcat label={t('os.wcat.help')} insideLabel={t('os.wcat.inside')} toyLabel={t('os.wcat.yarn')} toyHelp={t('os.wcat.yarnHelp')} />
       <div data-taskbar>
         <Taskbar open={state.open} minimized={state.minimized} onSelect={selectTask} />
       </div>

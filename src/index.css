@@ -90,6 +90,13 @@
 .wcat-layer { position: absolute; inset: 0; z-index: 35; pointer-events: none; overflow: clip; }
 .wcat-landing { position: absolute; top: 0; left: 0; width: 48px; height: 2px; border-radius: 2px; background: #b0f4ff; box-shadow: 0 0 7px #67e8f9; visibility: hidden; pointer-events: none; }
 .wcat-mobile { position: fixed; height: 100dvh; }
+.wcat-yarn-layer { position: absolute; inset: 0; z-index: 36; pointer-events: none; overflow: clip; }
+.wcat-yarn-layer.wcat-mobile { position: fixed; height: 100dvh; }
+.wcat-string { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.wcat-yarn { position: absolute; top: 0; left: 0; width: 36px; height: 36px; padding: 0; border: 0; background: none; visibility: hidden; pointer-events: auto; cursor: grab; touch-action: pan-y; user-select: none; font-size: 32px; line-height: 1; }
+.wcat-yarn > span { display: block; transform: rotate(var(--yarn-roll, 0rad)); }
+.wcat-yarn[data-held="true"] { cursor: grabbing; }
+.wcat-yarn:focus-visible { outline: 2px solid #67e8f9; outline-offset: 4px; border-radius: 50%; }
 .wcat {
   position: absolute; top: 0; left: 0; width: 44px; height: 44px;
   padding: 0; border: 0; background: none; visibility: hidden;
@@ -101,17 +108,17 @@
 .wcat[data-held="true"] { cursor: grabbing; }
 .wcat-art { position: absolute; inset: 0; transform-origin: 50% 100%; }
 .wcat-silhouette {
-  position: absolute; inset: 5px 0 0; background: #050505;
+  position: absolute; inset: 5px 0 0;
   border-radius: 42% 42% 32% 32%; transform: scaleX(var(--wcat-facing, 1));
-  box-shadow: 0 1px 0 rgb(255 255 255 / 10%);
   transition: border-radius 150ms ease;
 }
-.wcat-ear { position: absolute; top: -5px; width: 15px; height: 17px; background: #050505; }
+.wcat-body { position: absolute; inset: 0; z-index: 1; background: #050505; border-radius: inherit; box-shadow: 0 1px 0 rgb(255 255 255 / 10%); }
+.wcat-ear { position: absolute; top: -5px; z-index: 2; width: 15px; height: 17px; background: #050505; }
 .wcat-ear-left { left: 0; clip-path: polygon(0 0, 100% 65%, 10% 100%); }
 .wcat-ear-right { right: 0; clip-path: polygon(100% 0, 90% 100%, 0 65%); }
 .wcat-tail {
   position: absolute; left: -22px; top: -6px; width: 52px; height: 54px;
-  color: #050505; pointer-events: none; overflow: visible;
+  z-index: 0; color: #050505; pointer-events: none; overflow: visible;
 }
 .wcat-face { position: absolute; inset: 0; transform: rotate(var(--wcat-roll, 0rad)); }
 .wcat-eyes {

@@ -9,8 +9,9 @@ The owner's preview feedback added petting, poking, toy-like hunting,
 half-open waking eyes and floating sleep marks. Later feedback added gentle
 window placement, live attention bouts, a flexible tail, harder-to-trigger
 petting, rare dizziness, edge inspection and private app visits.
-The behavior below includes that refinement. Its tests and review record are
-in `../plans/2026-09-05-wcat-behavior.md` and `../plans/2026-09-05-wcat-handling.md`.
+The next pass adds a private yarn toy, live selection-box collisions and
+perching, right-click sticker removal, and a flat tail attached behind the
+body. Verification records are in the behavior, handling and toy plans.
 
 ## What the owner asked for
 
@@ -41,9 +42,11 @@ it again before drawing the body.
 
 ## Approach
 
-Hand-rolled. One `requestAnimationFrame` loop, a pure physics module, a pure
+Hand-rolled. One cat `requestAnimationFrame` loop, a pure physics module, a pure
 behaviour state machine, and platforms read each frame from the DOM rects of
-visible window title bars. No new dependency.
+visible window title bars. An optional yarn toy runs its own physics/string
+loop only while present. Both pause in hidden tabs and clean up on unmount.
+No new dependency.
 
 Rejected: matter.js (about 80 KB for one rigid body, and platforms would still
 need syncing every frame) and CSS-only animation (cannot throw a ball).
@@ -60,6 +63,9 @@ src/wcat/
   exploration.ts pure: visit eligibility, inspection and entry decisions.
                  Also reads exposed icons and available room hosts.
   tail.ts        SVG curve poses and frame-rate-independent smoothing.
+  yarn.ts        private ball physics and a constrained, trailing string.
+  toy-brain.ts   bounded pursuit, crouching, pouncing, batting and boredom.
+  YarnToy.tsx    local palette control, pointer/keyboard handling and toy loop.
   Wcat.tsx       one-cat residence coordinator, private visited-app set and portals.
   Cat.tsx        the component: rAF loop, pointer handling, writes transform to
                  the element through a ref. React state only for form and mood.
@@ -75,7 +81,9 @@ the cat element itself has `pointer-events: auto`. On phones the layer is
 ## Look
 
 A 44 px black cat built from CSS shapes in one element: rounded body, two
-triangle ears, a flexible SVG tail with separate middle and tip movement.
+triangle ears, and a flat SVG tail. Its fixed base sits behind a foreground
+body shape, with only the outer curve swishing. Constant-width ink stays
+above the feet; no perspective, depth scaling or rotating tail plane.
 Face per the reference above, scaled to the body. Eyes blink every 3 to 6 s
 (scaleY to 0.1 for 120 ms). Attention bouts track the live pointer for 2 to
 3.5 seconds, with 8 to 14 seconds between opportunities. They can include
@@ -150,8 +158,8 @@ is capped by the ceiling. An isolated cat walks off an edge before falling.
   then sit for at least five seconds. Canceled drags do not snap.
 - Flight: gravity, bounce off the four bounds with restitution 0.72, roll on
   the floor with friction (velocity x times 0.985 per frame at 60 Hz, scaled
-  by dt). The ball ignores windows.
-- Rest: speed under 40 px/s while on the floor for 300 ms → unroll into cat
+  by dt). The ball ignores windows, but collides with a live selection box.
+- Rest: speed under 40 px/s on the floor or selection top for 300 ms → unroll into cat
   form → sit.
 - Dizziness requires a launch of at least 1300 px/s, three full rotations
   while moving horizontally at least 600 px/s, and one impact of at least
@@ -167,6 +175,31 @@ Same component. Floor at the viewport bottom minus 8 px, no platforms, brain
 restricted to sit, sleep/wake and affection reactions. Tap to poke, long-press to lift
 so a normal swipe still scrolls. The ball bounces off the viewport edges like
 on desktop. Touch movement does not trigger mouse-style petting or hunting.
+
+## Yarn toy and selection boxes
+
+The 🧶 palette control toggles one local yarn ball. It is not a shared
+sticker, never enters playhtml, and resets on reload. Drag to throw, hold
+first on touch, or use Space/Enter and arrows. Right-click or Delete removes
+it. A 14-point constrained string follows the ball and respects the floor,
+viewport and selection box. Reduced motion uses a still string and straight
+drops. Phones retain the bottom-edge cat behavior, without a chase.
+
+A fresh throw can start a desktop play session lasting 7 to 13 seconds.
+The cat pursues, crouches, pounces and bats the ball away, then turns away
+and ignores fresh throws for 10 to 18 seconds. Batting or repeated throws
+do not extend that session. Holding the toy pauses pursuit, not the interest
+timer. Direct cat interaction, sleep, app residence and reduced motion take
+priority. Picking up the cat ends play.
+
+The live selection rectangle is solid on all four sides. Moving or growing
+it resolves existing overlaps. Its top is a temporary platform: the cat
+clears the side before crossing onto it, and falls when selection ends.
+This rectangle stays local with the desktop's existing selection state.
+
+Right-clicking a placed emoji removes only that instance from its shared
+room. Palette entries remain. The private yarn's removal affects only this
+visitor. Secondary mouse buttons never start a sticker/window drag.
 
 ## Not stored, not shared
 
@@ -221,6 +254,13 @@ PointerEvent and pointer capture.
 - `scripts/gate/verify-wcat-handling.mjs`: placement, live gaze, cooldown,
   tail movement, edge decisions, dizziness, icon badge, app open/close/
   minimize/restore, visible room hit target and dragging back outside.
+- `yarn.test.ts`: flight, string constraints, batting, bounded interest,
+  cooldown, interruption and reduced motion. Selection collision and jump
+  regressions live in the physics, world and brain tests.
+- `scripts/gate/verify-stickers-tail.mjs`: shared removal across two visitors,
+  primary-button dragging and flat rear-tail geometry/poses.
+- `scripts/gate/verify-wcat-toy.mjs`: private toy, throws, string, play phases,
+  boredom, keyboard/removal, reduced motion, live wall bounces and perching.
 
 ## Budget
 
@@ -237,5 +277,5 @@ Headless WebGL on this PC makes the full page substantially slower.
 
 ## Out of scope
 
-Sounds, more than one cat, persistence, sharing, the cat reacting to
-stickers, the cat pushing windows.
+Sounds, more than one cat, persistence, sharing the cat or yarn, the cat
+reacting to ordinary shared stickers, and the cat pushing windows.

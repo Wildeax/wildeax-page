@@ -6,7 +6,8 @@ const REST_SPEED = 40
 const BOUNCE = 0.72
 
 export interface Platform { id: string; left: number; right: number; y: number }
-export interface World { width: number; floor: number; platforms: readonly Platform[]; reducedMotion?: boolean }
+export interface Obstacle extends Platform { bottom: number }
+export interface World { width: number; floor: number; platforms: readonly Platform[]; obstacles?: readonly Obstacle[]; reducedMotion?: boolean }
 export interface Body {
   /** Horizontal center and feet, in layer coordinates. Velocities are px/s. */
   x: number; y: number; vx: number; vy: number
@@ -69,7 +70,7 @@ function integrate(body: Body, dt: number, world: World): Body {
   const size = sizeOf(body)
   const radius = size / 2
   const bounce = ball && !world.reducedMotion ? BOUNCE : 0
-  const grounded = body.vy === 0 && (ball ? body.ground === 'floor' && body.y >= world.floor : !!support(body, world))
+  const grounded = body.vy === 0 && !!support(body, world)
   if (ball && world.reducedMotion) { next.vx = 0; next.vy = Math.max(0, next.vy) }
   next.ground = grounded ? body.ground : null
   next.x += next.vx * dt
@@ -81,6 +82,30 @@ function integrate(body: Body, dt: number, world: World): Body {
   if (next.x < radius) { impact(next.vx); next.x = radius; next.vx = Math.abs(next.vx) * bounce }
   if (next.x > world.width - radius) { impact(next.vx); next.x = Math.max(radius, world.width - radius); next.vx = -Math.abs(next.vx) * bounce }
   if (next.y < size) { impact(next.vy); next.y = size; next.vy = Math.abs(next.vy) * bounce }
+
+  for (const wall of world.obstacles ?? []) {
+    if (next.x + radius <= wall.left || next.x - radius >= wall.right || next.y <= wall.y || next.y - size >= wall.bottom) continue
+    const exits = [
+      { side: 'left', amount: next.x + radius - wall.left, available: wall.left >= size, crossed: body.x + radius <= wall.left },
+      { side: 'right', amount: wall.right - next.x + radius, available: wall.right <= world.width - size, crossed: body.x - radius >= wall.right },
+      { side: 'top', amount: next.y - wall.y, available: wall.y >= size, crossed: body.y <= wall.y },
+      { side: 'bottom', amount: wall.bottom - next.y + size, available: wall.bottom <= world.floor - size, crossed: body.y - size >= wall.bottom },
+    ].filter((exit) => exit.available).sort((a, b) => Number(b.crossed) - Number(a.crossed) || a.amount - b.amount)
+    // A rectangle that covers the whole viewport has no outside space.
+    // Stop safely instead of inventing a huge separating velocity.
+    if (!exits[0]) { next.vx = 0; next.vy = 0; continue }
+    switch (exits[0].side) {
+      case 'left': impact(next.vx); next.x = wall.left - radius; next.vx = -Math.abs(next.vx) * bounce; break
+      case 'right': impact(next.vx); next.x = wall.right + radius; next.vx = Math.abs(next.vx) * bounce; break
+      case 'top':
+        impact(next.vy)
+        next.y = wall.y
+        next.vy = next.vy > 60 ? -next.vy * bounce : 0
+        next.ground = next.vy === 0 ? wall.id : null
+        break
+      case 'bottom': impact(next.vy); next.y = wall.bottom + size; next.vy = Math.abs(next.vy) * bounce; next.ground = null; break
+    }
+  }
 
   // One-way platforms: the feet must cross the top on the way down. Sort by
   // crossing height so the DOM order cannot make the cat tunnel through one.
@@ -100,14 +125,14 @@ function integrate(body: Body, dt: number, world: World): Body {
     next.ground = next.vy === 0 ? 'floor' : null
   }
   // Walking beyond a title bar removes support on this step, not a frame later.
-  if (!ball && next.ground && !support(next, world)) next.ground = null
-  if (ball && next.ground === 'floor') next.vx *= Math.pow(0.985, dt * 60)
+  if (next.ground && !support(next, world)) next.ground = null
+  if (ball && next.ground) next.vx *= Math.pow(0.985, dt * 60)
   if (ball) {
     const rotation = (next.x - body.x) / radius
     next.angle += rotation
     if (Math.abs(body.vx) >= 600) next.fastTurns = Math.min(50, next.fastTurns + Math.abs(rotation) / (2 * Math.PI))
   }
-  next.rest = ball && next.ground === 'floor' && Math.hypot(next.vx, next.vy) < REST_SPEED ? next.rest + dt : 0
+  next.rest = ball && next.ground && Math.hypot(next.vx, next.vy) < REST_SPEED ? next.rest + dt : 0
   return next
 }
 

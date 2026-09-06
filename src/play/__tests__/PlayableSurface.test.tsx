@@ -33,6 +33,18 @@ function givePage(
 }
 
 describe('PlayableSurface', () => {
+  it.each([1, 2])('does not turn mouse button %i into a drag', (button) => {
+    const onTransform = vi.fn()
+    const { container } = render(<PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={onTransform}><span>sticker</span></PlayableSurface>)
+    const el = container.firstElementChild as HTMLElement
+    givePage(el, { left: 100, top: 100, width: 50, height: 50 }, 1000, 800)
+    fireEvent.pointerDown(el, { pointerId: 1, button, clientX: 0, clientY: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(el, { pointerId: 1, clientX: 40, clientY: 20 })
+    fireEvent.pointerUp(el, { pointerId: 1, button, clientX: 40, clientY: 20 })
+    expect(onTransform).not.toHaveBeenCalled()
+    expect(el.hasPointerCapture(1)).toBe(false)
+  })
+
   it('renders its children', () => {
     render(
       <PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={() => {}}>

@@ -26,6 +26,57 @@ function move(x = 340, y = 400, pointerType = 'mouse') {
 }
 
 describe('wcat interaction', () => {
+  it('requires a deliberate yarn drag and gives a poke priority over play', () => {
+    const view = render(<div data-desktop><div data-sticker-dock /><Wcat label="wcat" /></div>)
+    fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
+    const toy = view.container.querySelector<HTMLElement>('[data-yarn]')!
+    fireEvent.pointerDown(toy, { pointerId: 1, pointerType: 'mouse', button: 0, isPrimary: true, clientX: 480, clientY: 582 })
+    fireEvent.pointerMove(toy, { pointerId: 1, clientX: 482, clientY: 582 })
+    expect(toy.dataset.held).toBe('false')
+    fireEvent.pointerUp(toy, { pointerId: 1, clientX: 482, clientY: 582 })
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.toyInterest).toBe('true')
+    fireEvent.click(cat(), { detail: 0 })
+    expect(cat().dataset.mode).toBe('poke')
+    expect(cat().dataset.toyInterest).toBe('false')
+  })
+
+  it('lets a touch swipe pass, but holds and drags the yarn after a long press', () => {
+    const view = render(<div data-desktop><div data-sticker-dock /><Wcat mobile label="wcat" /></div>)
+    fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
+    const toy = view.container.querySelector<HTMLElement>('[data-yarn]')!
+    const down = () => fireEvent.pointerDown(toy, { pointerId: 1, pointerType: 'touch', button: 0, isPrimary: true, clientX: 480, clientY: 618 })
+    down()
+    fireEvent.pointerMove(toy, { pointerId: 1, pointerType: 'touch', clientX: 480, clientY: 590 })
+    act(() => vi.advanceTimersByTime(300))
+    expect(toy.dataset.held).toBe('false')
+    expect(cat().dataset.toyInterest).toBe('false')
+    down()
+    act(() => vi.advanceTimersByTime(300))
+    expect(toy.dataset.held).toBe('true')
+    fireEvent.pointerMove(toy, { pointerId: 1, pointerType: 'touch', clientX: 500, clientY: 500 })
+    expect(toy.style.transform).toContain('482px')
+    fireEvent.pointerCancel(toy, { pointerId: 1 })
+    expect(toy.dataset.held).toBe('false')
+    view.unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('offers a private yarn toy, plays briefly and cleans up both loops', () => {
+    const view = render(<div data-desktop><div data-sticker-dock /><Wcat label="wcat" /></div>)
+    fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
+    expect(view.container.querySelector('[data-yarn]')).toBeTruthy()
+    expect(view.container.querySelectorAll('[data-sticker]')).toHaveLength(0)
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.toyInterest).toBe('true')
+    act(() => vi.advanceTimersByTime(11000))
+    expect(cat().dataset.toyInterest).toBe('false')
+    fireEvent.contextMenu(view.container.querySelector('[data-yarn]')!)
+    expect(view.container.querySelector('[data-yarn]')).toBeNull()
+    view.unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   it('sleeps instead of starting an overdue icon visit after a stalled frame', () => {
     render(<div data-desktop><button data-icon="art">Art</button><div data-window="art" hidden><div data-wcat-room="art" /></div><Wcat label="wcat" /></div>)
     vi.spyOn(performance, 'now').mockReturnValue(46000)

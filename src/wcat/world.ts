@@ -1,5 +1,5 @@
 import { CAT_SIZE } from './physics'
-import type { World } from './physics'
+import type { Obstacle, World } from './physics'
 
 /** All layout reads happen together, before the frame writes the cat transform. */
 export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: boolean, room = false): World & { left: number; top: number } {
@@ -17,6 +17,12 @@ export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: bo
   }
   if (mobile) return { ...world, platforms: [] }
   const root = layer.parentElement ?? layer
+  const band = root.querySelector('[data-marquee]')?.getBoundingClientRect()
+  const obstacles: Obstacle[] = []
+  if (band && band.width >= 2 && band.height >= 2) {
+    const wall = { id: 'selection', left: Math.max(0, band.left - rect.left), right: Math.min(width, band.right - rect.left), y: Math.max(0, band.top - rect.top), bottom: Math.min(world.floor, band.bottom - rect.top) }
+    if (wall.right > wall.left && wall.bottom > wall.y) obstacles.push(wall)
+  }
   const platforms = [...root.querySelectorAll<HTMLElement>('[data-window]:not([hidden]) [data-drag-handle]')].flatMap((el) => {
     if (el.closest('.os-flight-minimize, .os-flight-close')) return []
     const r = el.getBoundingClientRect()
@@ -27,5 +33,6 @@ export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: bo
     if (y < CAT_SIZE || y >= world.floor || right - left < CAT_SIZE) return []
     return [{ id: el.closest<HTMLElement>('[data-window]')!.dataset.window!, left, right, y }]
   })
-  return { ...world, platforms }
+  for (const wall of obstacles) if (wall.y >= CAT_SIZE && wall.right - wall.left >= CAT_SIZE) platforms.push(wall)
+  return { ...world, platforms, obstacles }
 }

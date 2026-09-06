@@ -11,6 +11,23 @@ function input(now: number, patch: Partial<Input> = {}): Input {
 }
 
 describe('wcat brain', () => {
+  it('clears a solid selection wall before crossing onto its top', () => {
+    const wall = { id: 'selection', left: 302, right: 650, y: 380, bottom: 600 }
+    const bounds = { ...world, obstacles: [wall], platforms: [wall] }
+    let body = createBody(bounds)
+    let brain = createBrain(0, random)
+    let landed = false
+    for (let i = 0; i < 540; i++) {
+      const now = i / 60
+      ;({ body, brain } = think(brain, body, input(now, { world: bounds })))
+      body = step(body, 1 / 60, bounds)
+      if (body.ground === 'selection') { landed = true; break }
+    }
+    expect(landed).toBe(true)
+    expect(body.x).toBeGreaterThan(wall.left)
+    expect(body.y).toBe(wall.y)
+  })
+
   it('sits until its injected timer expires, then walks', () => {
     const brain = createBrain(0, random)
     expect(think(brain, createBody(world), input(4)).brain.mode).toBe('sit')
