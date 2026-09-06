@@ -33,6 +33,13 @@ interface DragState {
  */
 const NO_DRAG_SELECTOR = 'button, a, input, select, textarea, [data-no-drag]'
 
+/**
+ * The opposite escape hatch. A desktop icon IS a button and IS the thing you
+ * drag, so it opts back in. The click threshold still separates a click from a
+ * drag: under 5px opens it, over 5px moves it and the click never fires.
+ */
+const DRAG_OK_SELECTOR = '[data-drag-ok]'
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -68,7 +75,7 @@ export function PlayableSurface({ caps, transform, onTransform, children, handle
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!canMove) return
       const target = e.target as Element
-      if (target.closest(NO_DRAG_SELECTOR)) return
+      if (target.closest(NO_DRAG_SELECTOR) && !target.closest(DRAG_OK_SELECTOR)) return
       if (handle && !target.closest(handle)) return
       const pointerId = e.pointerId
       drag.current = {

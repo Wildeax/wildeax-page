@@ -170,6 +170,67 @@ describe('Desktop at desktop widths', () => {
     expect(document.querySelector('[data-task="me"]')).toBeNull()
   })
 
+  it('shows a one-item context menu on right-click over bare wallpaper, and Refresh closes it', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    const root = document.querySelector('[data-desktop]') as HTMLElement
+    fireEvent.contextMenu(root)
+    const item = document.querySelector('[data-context-menu] [role="menuitem"]') as HTMLElement
+    expect(item).not.toBeNull()
+    expect(item.textContent).toMatch(/Refresh|Actualizar/)
+    expect(document.querySelectorAll('[data-context-menu] [role="menuitem"]')).toHaveLength(1)
+    fireEvent.click(item)
+    expect(document.querySelector('[data-context-menu]')).toBeNull()
+  })
+
+  it('leaves right-click on a window to the browser', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    fireEvent.contextMenu(document.querySelector('[data-window="readme"]')!)
+    expect(document.querySelector('[data-context-menu]')).toBeNull()
+  })
+
+  it('draws a marquee while dragging on bare wallpaper and removes it on release', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    const root = document.querySelector('[data-desktop]') as HTMLElement
+    fireEvent.pointerDown(root, { pointerId: 1, clientX: 500, clientY: 300, button: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(root, { pointerId: 1, clientX: 620, clientY: 380 })
+    const band = document.querySelector('[data-marquee]') as HTMLElement
+    expect(band).not.toBeNull()
+    expect(band.style.left).toBe('500px')
+    expect(band.style.top).toBe('300px')
+    expect(band.style.width).toBe('120px')
+    expect(band.style.height).toBe('80px')
+    fireEvent.pointerUp(root, { pointerId: 1, clientX: 620, clientY: 380 })
+    expect(document.querySelector('[data-marquee]')).toBeNull()
+  })
+
+  it('does not start a marquee from a press on a window', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    const dialog = document.querySelector('[data-window="readme"]') as HTMLElement
+    fireEvent.pointerDown(dialog, { pointerId: 1, clientX: 200, clientY: 100, button: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(dialog, { pointerId: 1, clientX: 300, clientY: 200 })
+    expect(document.querySelector('[data-marquee]')).toBeNull()
+  })
+
   it('keeps closed windows in the DOM so crawlers read them', () => {
     setViewport(true)
     render(

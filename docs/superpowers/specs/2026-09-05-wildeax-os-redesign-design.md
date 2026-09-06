@@ -253,3 +253,20 @@ Real artwork for the `art/` window. Blocking nothing, since placeholders ship
 first, but the section is not finished until images exist. Around 10 to 20
 pieces in `src/assets/img/art/` is the agreed route; beyond roughly 20 the git
 repository starts carrying real weight and R2 becomes the better home.
+
+## Additions after shipping (2026-09-05)
+
+Requested by the author on seeing the desktop live.
+
+**Rubber-band selection.** Press on empty wallpaper and drag to draw a
+translucent rectangle. Icons it touches are highlighted until the next click on
+wallpaper. Per visitor, never shared; it carries no state worth syncing.
+
+**Right-click, Refresh.** A context menu on the wallpaper with one item. Refresh
+resets every desktop icon to its authored position and replays the entrance
+pop. Icon positions are shared, so the reset is shared too, the same model as
+every other position on the page. One item only until a second one is needed.
+
+**Windows drag by the title bar.** Also added after shipping: dragging from the
+body made text impossible to select. The play layer gains an optional drag
+handle; windows use it, icons and stickers do not.

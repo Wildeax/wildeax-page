@@ -8,6 +8,8 @@ type Resources = Record<Lang, Dict>
 
 export const resources: Resources = {
   en: {
+    'os.menu.refresh': 'Refresh',
+    'os.menu.close': 'Close menu',
     'os.win.questionary': 'questionary.exe',
     'os.project.questionary.name': 'Questionary',
     'os.project.questionary.desc': 'Open-source quiz app for studying. Loads questions from JSON or YAML, shuffles them, tracks progress, and resumes an unfinished session.',
@@ -83,6 +85,8 @@ export const resources: Resources = {
     'notfound.back': 'Go back home',
   },
   es: {
+    'os.menu.refresh': 'Actualizar',
+    'os.menu.close': 'Cerrar menú',
     'os.win.questionary': 'questionary.exe',
     'os.project.questionary.name': 'Questionary',
     'os.project.questionary.desc': 'App de cuestionarios de código abierto para estudiar. Carga preguntas desde JSON o YAML, las mezcla, guarda el progreso y retoma una sesión sin terminar.',
