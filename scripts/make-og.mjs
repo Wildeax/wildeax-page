@@ -58,8 +58,8 @@ const text = Buffer.from(`<svg width="${W}" height="${H}" xmlns="http://www.w3.o
         letter-spacing="6" fill="#ffffff">WILDEAX</text>
   <text x="${X}" y="352" font-family="${FONT}" font-size="33" font-weight="600"
         fill="#7dd3fc">${esc('Digital Artist & Developer')}</text>
-  <text x="${X}" y="410" font-family="${FONT}" font-size="25" fill="#94a0b0">Unity games, desktop apps,</text>
-  <text x="${X}" y="444" font-family="${FONT}" font-size="25" fill="#94a0b0">and the backends behind them.</text>
+  <text x="${X}" y="410" font-family="${FONT}" font-size="25" fill="#94a0b0">Game design, UX and UI,</text>
+  <text x="${X}" y="444" font-family="${FONT}" font-size="25" fill="#94a0b0">and apps built to feel right.</text>
   <text x="${X}" y="516" font-family="${FONT}" font-size="23" font-weight="600"
         letter-spacing="1.5" fill="#5b6472">wildeax.com</text>
 </svg>`)

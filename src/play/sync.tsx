@@ -21,6 +21,8 @@ export interface PlayableProps {
   id: string
   caps: readonly Capability[]
   children: ReactNode
+  /** Forwarded to PlayableSurface: restrict drag starts to this selector. */
+  handle?: string
 }
 
 /**
@@ -33,8 +35,14 @@ export interface PlayableProps {
 const SharedPlayable = withSharedState(
   (props: PlayableProps) => ({ defaultData: IDENTITY_TRANSFORM, id: props.id }),
   ({ data, setData }: { data: Transform; setData: (t: Transform) => void }, props: PlayableProps) => (
-    <PlayableSurface caps={props.caps} transform={data} onTransform={setData}>
-      {props.children}
+    <PlayableSurface caps={props.caps} transform={data} onTransform={setData} handle={props.handle}>
+      {/* playhtml's HOC walks the React tree for the first DOM element and
+          clones its id and ref onto it. PlayableSurface is a component, so it
+          looks inside; if the child is also a component with no DOM child of
+          its own (DesktopIcon), it gives up and spreads those props onto the
+          component instead, clobbering its id and never attaching the ref, so
+          that element never syncs. This div is the guaranteed target. */}
+      <div data-play-anchor>{props.children}</div>
     </PlayableSurface>
   ),
 )
@@ -63,7 +71,7 @@ class PlayBoundary extends Component<
   }
 }
 
-export function Playable({ id, caps, children }: PlayableProps) {
+export function Playable({ id, caps, children, handle }: PlayableProps) {
   return (
     <PlayBoundary
       fallback={
@@ -72,7 +80,7 @@ export function Playable({ id, caps, children }: PlayableProps) {
         </PlayableSurface>
       }
     >
-      <SharedPlayable id={id} caps={caps}>
+      <SharedPlayable id={id} caps={caps} handle={handle}>
         {children}
       </SharedPlayable>
     </PlayBoundary>

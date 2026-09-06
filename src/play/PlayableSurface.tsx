@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react'
+import type { DragEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { clampToBounds, exceedsDragThreshold, LONG_PRESS_MS } from '@/play/drag'
 import type { Capability, Point, Transform } from '@/play/types'
 
@@ -8,6 +8,13 @@ export interface PlayableSurfaceProps {
   transform: Transform
   onTransform: (t: Transform) => void
   children: ReactNode
+  /**
+   * CSS selector. When set, only a press inside a matching descendant starts
+   * a drag; presses elsewhere are left alone, so text in a window body can be
+   * selected. Windows pass their title bar. Icons and stickers pass nothing
+   * and drag from anywhere, which is right for them.
+   */
+  handle?: string
 }
 
 interface DragState {
@@ -17,6 +24,14 @@ interface DragState {
   /** False until the threshold is crossed, or until the touch long-press fires. */
   active: boolean
 }
+
+/**
+ * A press on any of these is a click, never a drag. Every drag library has the
+ * same escape hatch (react-draggable calls it `cancel`). Without it a press on
+ * a close button that moves 5px, which is most real clicks, drags the window
+ * and the click never fires.
+ */
+const NO_DRAG_SELECTOR = 'button, a, input, select, textarea, [data-no-drag]'
 
 function prefersReducedMotion(): boolean {
   return (
@@ -31,7 +46,7 @@ function prefersReducedMotion(): boolean {
  * one. Imports nothing from playhtml so it can be tested alone and so the
  * offline path in sync.tsx can render it inert.
  */
-export function PlayableSurface({ caps, transform, onTransform, children }: PlayableSurfaceProps) {
+export function PlayableSurface({ caps, transform, onTransform, children, handle }: PlayableSurfaceProps) {
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef<DragState | null>(null)
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -52,6 +67,9 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!canMove) return
+      const target = e.target as Element
+      if (target.closest(NO_DRAG_SELECTOR)) return
+      if (handle && !target.closest(handle)) return
       const pointerId = e.pointerId
       drag.current = {
         pointerId,
@@ -71,7 +89,7 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
         }, LONG_PRESS_MS)
       }
     },
-    [canMove, transform],
+    [canMove, handle, transform],
   )
 
   const onPointerMove = useCallback(
@@ -133,6 +151,16 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
     [clearLongPress],
   )
 
+  // Images and links start the browser's own drag-and-drop on press, which
+  // fires pointercancel and kills our gesture. A window that is mostly a photo
+  // becomes undraggable. Refusing native drag here covers every descendant.
+  const onDragStart = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      if (canMove) e.preventDefault()
+    },
+    [canMove],
+  )
+
   const css = `translate(${transform.x}px, ${transform.y}px) rotate(${transform.rotation}deg) scale(${transform.scale})`
 
   return (
@@ -142,9 +170,12 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
+      onDragStart={onDragStart}
       style={{
         transform: css,
         touchAction: canMove ? 'pan-y' : undefined,
+        // Once lifted, stop text selection from growing under the pointer.
+        userSelect: lifted ? 'none' : undefined,
         // The settle animation is ambient motion nobody asked for.
         transition: lifted || reducedMotion ? 'none' : 'transform 120ms ease-out',
         zIndex: lifted ? 40 : undefined,

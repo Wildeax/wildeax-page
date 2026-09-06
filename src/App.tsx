@@ -1,60 +1,67 @@
 // no default React import needed in React 17+ JSX runtime
 import { lazy, Suspense } from 'react'
-import { Navbar, Hero, Features, About, Contact, Footer } from '@/components'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Aurora from '@/reactbits/Aurora'
 import { PlayRoot } from '@/play'
 import { StickerLayer } from '@/play/StickerLayer'
-import { PresenceBadge } from '@/components/PresenceBadge'
+import { Desktop } from '@/os/Desktop'
 
 // Split out so `three` (AsciiCanvasText, used only by NotFound) and
-// `react-icons` (used only by Links) leave the main chunk. Both were being
-// downloaded by every visitor to the home page.
+// `react-icons` (used only by Links) leave the main chunk.
 const Links = lazy(() => import('@/pages/Links'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+}
 
 function App() {
   const { pathname } = useLocation()
   return (
     <PlayRoot pathname={pathname}>
-      <div className="min-h-screen bg-[#0b0e12] text-zinc-200 antialiased overflow-x-hidden relative">
-        {/* Background layers (now inside stacking context and visible) */}
+      <div className="relative min-h-screen bg-[#0b0e12] text-zinc-200 antialiased">
+        {/* Wallpaper */}
         <div className="pointer-events-none fixed inset-0 z-0">
-          {/* Aurora WebGL */}
-          <div className="absolute inset-0 opacity-80">
-            <Aurora colorStops={["#0ea5e9", "#7c3aed", "#0ea5e9"]} amplitude={1.3} blend={0.7} />
-          </div>
-          {/* Subtle grid */}
+          {prefersReducedMotion() ? (
+            // Aurora runs a WebGL animation loop. Under reduced motion it is
+            // replaced by a static gradient rather than left black.
+            <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(14,165,233,0.35),transparent),radial-gradient(60%_60%_at_80%_90%,rgba(124,58,237,0.3),transparent)]" />
+          ) : (
+            <div className="absolute inset-0 opacity-80">
+              <Aurora colorStops={['#0ea5e9', '#7c3aed', '#0ea5e9']} amplitude={1.3} blend={0.7} />
+            </div>
+          )}
           <div className="absolute inset-0 bg-grid [background-size:24px_24px] opacity-[0.05]" />
+          {/* Scanlines */}
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(to bottom, rgba(255,255,255,0.6) 0px, rgba(255,255,255,0.6) 1px, transparent 1px, transparent 3px)',
+            }}
+          />
         </div>
-
-
-        <Navbar>
-          {/* Hide theme toggle for now */}
-        </Navbar>
 
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={
-              <main>
-                <Hero />
-                <Features />
-                <About />
-                <Contact />
-              </main>
-            } />
-            <Route path="/links" element={
-              <div className="relative z-10">
-                <Links />
-              </div>
-            } />
+            <Route path="/" element={<Desktop />} />
+            <Route
+              path="/links"
+              element={
+                <div className="relative z-10">
+                  <Links />
+                </div>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
 
-        <Footer />
         <StickerLayer />
-        <PresenceBadge />
       </div>
     </PlayRoot>
   )
