@@ -1,9 +1,9 @@
 # wcat: a black cat that lives on the WILDEAX OS desktop
 
-Status: **designed, not approved, not started.** The owner answered the three
-scoping questions below on 2026-09-05 and then asked for a hand-off instead
-of approving the design. Whoever picks this up: read this, read
-`docs/HANDOFF.md`, then get an explicit yes on the design before writing code.
+Status: **implemented, awaiting preview review.** The owner approved the
+presented design with "Go" on 2026-09-05. Work is on `feat/wcat`.
+The missing body reference remains an art-review limitation. The first
+reviewable version uses the rounded silhouette described below.
 
 ## What the owner asked for
 
@@ -48,6 +48,7 @@ src/wcat/
   physics.ts     pure: step(state, dt, world) -> state. Gravity, bounds, platforms.
   brain.ts       pure: state machine over {sit, walk, jump, follow, nap, fall, ball}.
                  Takes an injected clock and random so tests are deterministic.
+  world.ts       reads visible title bars and layer bounds before frame writes.
   Wcat.tsx       the component: rAF loop, pointer handling, writes transform to
                  the element through a ref. React state only for form and mood.
 src/index.css    cat and ball shapes, blink keyframes, morph transition.
@@ -71,6 +72,12 @@ Ball form: a 36 px black circle, ears and tail hidden, face kept and rotated
 by distance rolled divided by radius. Morph is a 150 ms transition on width,
 height and border-radius.
 
+The sticker palette is raised to leave room for the cat along the floor.
+Remote cursors now render in a clipped `#play-cursors` layer. Without it,
+a desktop visitor's off-screen cursor enlarges a phone's layout viewport.
+Keyboard users can lift/drop with Space or Enter, move with arrows, and
+drop with Escape. Instructions are available in English and Spanish.
+
 ## World
 
 - Bounds: the desktop root rect minus the 44 px taskbar. Floor is the
@@ -91,6 +98,12 @@ height and border-radius.
 | follow | pointer still 1.5 s inside the desktop and more than 120 px away | walk toward pointer x; jump toward a surface under it when reachable | within 40 px → sit; 6 s elapsed → sit; pointer moves → sit |
 | nap | 45 s without pointer movement | eyes closed, body 10% flatter | pointer within 150 px or any drag → sit |
 | fall | the surface under the feet is gone (window closed, minimized or moved) | gravity, land on the first platform below or the floor, squash 120 ms | landing → sit |
+
+Implementation correction: floor jumps may reach the lowest nearby window
+top regardless of its height. Normal windows are taller than 180 px, and
+their drag bounds otherwise make every top unreachable from the floor.
+Jumps between windows retain the 180 px limit. Clearance above the target
+is capped by the ceiling. An isolated cat walks off an edge before falling.
 
 ## Ball
 
@@ -142,9 +155,15 @@ PointerEvent and pointer capture.
 
 ## Budget
 
-About 450 lines including tests. Roughly 6 KB more in the bundle. Test the
-frame loop's cost with the Performance panel while ten windows are open; the
-DOM reads are the only per-frame work that scales.
+The original estimate was 450 lines including tests. The implementation is
+about 820 lines in `src/wcat/`, including tests, plus CSS and browser checks.
+Touch cancellation, keyboard controls, and viewport integration account for
+the additional code. No runtime dependency was added.
+
+On this PC, a five-second browser profile with ten windows open measured
+67 cat frames at 0.31 ms mean, 0.60 ms p95, and 0.70 ms maximum callback
+time. This measures the cat callback, not total rendering or page FPS.
+Headless WebGL on this PC makes the full page substantially slower.
 
 ## Out of scope
 

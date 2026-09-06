@@ -8,6 +8,7 @@ type Resources = Record<Lang, Dict>
 
 export const resources: Resources = {
   en: {
+    'os.wcat.help': 'wcat. Drag to throw, or hold on touch. Keyboard: Space to lift or drop, arrows to move, Escape to drop.',
     'os.menu.refresh': 'Refresh',
     'os.menu.close': 'Close menu',
     'os.win.questionary': 'questionary.exe',
@@ -85,6 +86,7 @@ export const resources: Resources = {
     'notfound.back': 'Go back home',
   },
   es: {
+    'os.wcat.help': 'wcat. Arrastra para lanzar, o mantén pulsado en pantalla táctil. Teclado: espacio para levantar o soltar, flechas para mover, Escape para soltar.',
     'os.menu.refresh': 'Actualizar',
     'os.menu.close': 'Cerrar menú',
     'os.win.questionary': 'questionary.exe',

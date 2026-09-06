@@ -38,13 +38,15 @@ never appear anywhere public.
 
 ```bash
 npm run dev                                  # Vite dev server
-npx vitest run --maxWorkers=1                # 104 tests. One worker: this PC runs near its memory limit
+npx vitest run --maxWorkers=1 --silent       # 139 tests. One worker: this PC runs near its memory limit
 npm run build                                # tsc -b && vite build
 npx wrangler versions upload                 # preview URL, does not touch production
 npx wrangler deploy                          # PRODUCTION. Needs the owner's explicit yes, every time
 
 cd scripts/gate && npm i && npx playwright install chromium
-node verify.mjs https://<preview>.workers.dev   # 26 checks, exit 0 when green
+node verify.mjs https://<preview>.workers.dev   # 33 checks, exit 0 when green
+node verify-wcat.mjs https://<preview>.workers.dev # focused pet interactions
+node profile-wcat.mjs https://<preview>.workers.dev # ten-window callback timings
 node verify.mjs https://www.wildeax.com          # same, against production
 node probe.mjs https://www.wildeax.com           # read-only snapshot of the real room
 ```
@@ -75,13 +77,14 @@ Gate sequence before any production deploy: tests green, build green,
 
 ## Pending
 
-1. **wcat** (the pet). Designed, not approved, not started. See
-   `docs/superpowers/specs/2026-09-05-wcat-design.md`. Next step is to
-   present that design to the owner, get a yes, then run the writing-plans
-   skill to produce `docs/superpowers/plans/2026-09-05-wcat.md`, then build
-   it test-first on its own branch, gate it on a preview, and ask before
-   deploying. Ask the owner to re-send the cat body reference image; only
-   the face survived.
+1. **wcat** (the pet). Approved and implemented on `feat/wcat`, not deployed.
+   See `docs/superpowers/specs/2026-09-05-wcat-design.md` and the verification
+   record in `docs/superpowers/plans/2026-09-05-wcat.md`. The local build,
+   139 tests, and 33 browser checks pass. Full lint retains its 19 baseline
+   errors and one warning; changed TypeScript files lint cleanly. The first
+   art pass uses the documented silhouette because the body reference is
+   still missing. Ask for that image for visual refinement. Production
+   deployment still requires the owner's separate approval.
 2. **Art window.** Ships with placeholders. Needs real artwork from the
    owner and a decision on how to add pieces (a folder under `public/art/`
    plus a manifest is the obvious shape).

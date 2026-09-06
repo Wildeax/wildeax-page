@@ -85,3 +85,58 @@
 .os-pop {
   animation: os-open 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
+
+/* wcat's layer never catches wallpaper gestures. Only the 44 px pet does. */
+.wcat-layer { position: absolute; inset: 0; z-index: 35; pointer-events: none; }
+.wcat-mobile { position: fixed; height: 100dvh; }
+.wcat {
+  position: absolute; top: 0; left: 0; width: 44px; height: 44px;
+  padding: 0; border: 0; background: none; visibility: hidden;
+  pointer-events: auto; cursor: grab; touch-action: pan-y;
+  user-select: none; -webkit-touch-callout: none; will-change: transform;
+  transition: width 150ms ease, height 150ms ease;
+}
+.wcat:focus-visible { outline: 2px solid #67e8f9; outline-offset: 5px; border-radius: 12px; }
+.wcat[data-held="true"] { cursor: grabbing; }
+.wcat-art { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.wcat-silhouette {
+  position: absolute; inset: 5px 0 0; background: #050505;
+  border-radius: 42% 42% 32% 32%; transform: scaleX(var(--wcat-facing, 1));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 10%);
+  transition: border-radius 150ms ease;
+}
+.wcat-ear { position: absolute; top: -5px; width: 15px; height: 17px; background: #050505; }
+.wcat-ear-left { left: 0; clip-path: polygon(0 0, 100% 65%, 10% 100%); }
+.wcat-ear-right { right: 0; clip-path: polygon(100% 0, 90% 100%, 0 65%); }
+.wcat-tail {
+  position: absolute; right: 34px; bottom: 2px; width: 21px; height: 26px;
+  border: 6px solid #050505; border-right-color: transparent; border-top-color: transparent;
+  border-radius: 50%; transform: rotate(20deg); transform-origin: 100% 90%;
+}
+.wcat-face { position: absolute; inset: 0; transform: rotate(var(--wcat-roll, 0rad)); }
+.wcat-eyes {
+  position: absolute; top: 31%; left: 14%; width: 72%; height: 22%;
+  display: flex; justify-content: space-between;
+  transform: translate(var(--wcat-eye-x, 0px), var(--wcat-eye-y, 0px));
+}
+.wcat-eyes > span { width: 30.56%; height: 100%; border-radius: 50%; background: #fff; }
+.wcat-mouth { position: absolute; left: 40%; top: 61%; width: 20%; height: 9%; }
+.wcat-mouth::before, .wcat-mouth::after {
+  content: ''; position: absolute; top: 0; left: 50%; width: 65%; height: 2px;
+  border-radius: 2px; background: #fff; transform-origin: 0 50%;
+}
+.wcat-mouth::before { transform: rotate(138deg); }
+.wcat-mouth::after { transform: rotate(42deg); }
+.wcat[data-blink="true"] .wcat-eyes > span, .wcat[data-mode="nap"] .wcat-eyes > span { transform: scaleY(0.1); }
+.wcat[data-mode="nap"] .wcat-art { transform: scaleY(0.9); }
+.wcat[data-squash="true"][data-form="cat"] .wcat-art { animation: wcat-land 120ms ease-out; }
+.wcat[data-mode="walk"] .wcat-tail, .wcat[data-mode="follow"] .wcat-tail { animation: wcat-tail 600ms ease-in-out infinite alternate; }
+.wcat[data-form="ball"] { width: 36px; height: 36px; }
+.wcat[data-form="ball"] .wcat-silhouette { inset: 0; border-radius: 50%; }
+.wcat[data-form="ball"] .wcat-ear, .wcat[data-form="ball"] .wcat-tail { display: none; }
+.wcat[data-held="true"] .wcat-art { filter: drop-shadow(0 6px 5px rgb(0 0 0 / 35%)); }
+@keyframes wcat-land { from { transform: scale(1.08, 0.86); } to { transform: scale(1); } }
+@keyframes wcat-tail { from { transform: rotate(10deg); } to { transform: rotate(30deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .wcat, .wcat * { animation: none !important; transition: none !important; }
+}
