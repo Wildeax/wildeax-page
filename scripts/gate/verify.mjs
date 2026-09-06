@@ -1,6 +1,7 @@
 // Drives the WILDEAX OS preview in real Chromium and reports what a visitor
 // would actually see. Usage: node verify.mjs <preview-url>
 import { chromium } from 'playwright'
+import { checkDesktopCat, checkMobileCat } from './wcat.mjs'
 
 const base = process.argv[2]
 if (!base) throw new Error('usage: node verify.mjs <url>')
@@ -231,6 +232,7 @@ console.log(`\nicon drag + refresh: art left ${Math.round(artBefore.x)} -> dragg
 console.log(`marquee mid-drag: ${marqueeMid ? marqueeMid.w + 'x' + marqueeMid.h : 'none'}; present after release: ${!marqueeAfter ? 'no' : 'YES'}; menu shown: ${menuShown}; menu closed after Refresh: ${menuGone}`)
 
 // Mobile: the same windows as a scrolling stack of cards, no taskbar, no drag.
+const desktopCatChecks = await checkDesktopCat(page)
 const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 mobile.on('pageerror', (e) => errors.push(`mobile pageerror: ${e.message}`))
 await mobile.goto(url, { waitUntil: 'networkidle' })
@@ -247,9 +249,12 @@ const m = await mobile.evaluate(() => ({
 }))
 await mobile.screenshot({ path: 'shot-6-mobile.png', fullPage: false })
 console.log(`\nmobile 390x844: ${m.visibleDialogs}/${m.dialogs} cards visible, taskbar=${m.taskbar}, icons=${m.icons}, langToggle=${m.langToggle}, page scrolls=${m.scrollable}, widest card ${Math.round(m.widestCard)}px of ${m.viewport}`)
+const mobileCatChecks = await checkMobileCat(mobile)
 await mobile.close()
 
 const checks = [
+  ...desktopCatChecks,
+  ...mobileCatChecks,
   // Logged but never asserted the first time, which let a regression through:
   // the cancel selector treated icons (buttons) as un-draggable for days.
   ['desktop icon can be dragged', artDragged.x > artBefore.x + 60],

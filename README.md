@@ -70,8 +70,8 @@ A simple card wrapper with optional title:
 
 Start with `docs/HANDOFF.md`. It says what is in production, where every
 piece lives, how to run the browser gate, and what is pending (wcat, the
-pet, is designed in `docs/superpowers/specs/2026-09-05-wcat-design.md` and
-waits for the owner's approval).
+pet, is implemented on `feat/wcat` and awaits preview review. Its design
+and verification record are in `docs/superpowers/`).
 
 ## The shared play layer
 

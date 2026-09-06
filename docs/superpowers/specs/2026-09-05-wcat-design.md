@@ -1,9 +1,17 @@
 # wcat: a black cat that lives on the WILDEAX OS desktop
 
-Status: **designed, not approved, not started.** The owner answered the three
-scoping questions below on 2026-09-05 and then asked for a hand-off instead
-of approving the design. Whoever picks this up: read this, read
-`docs/HANDOFF.md`, then get an explicit yes on the design before writing code.
+Status: **implemented, awaiting preview review.** The owner approved the
+presented design with "Go" on 2026-09-05. Work is on `feat/wcat`.
+The missing body reference remains an art-review limitation. The first
+reviewable version uses the rounded silhouette described below.
+
+The owner's preview feedback added petting, poking, toy-like hunting,
+half-open waking eyes and floating sleep marks. Later feedback added gentle
+window placement, live attention bouts, a flexible tail, harder-to-trigger
+petting, rare dizziness, edge inspection and private app visits.
+The next pass adds a private yarn toy, live selection-box collisions and
+perching, right-click sticker removal, and a flat tail attached behind the
+body. Verification records are in the behavior, handling and toy plans.
 
 ## What the owner asked for
 
@@ -29,14 +37,16 @@ it again before drawing the body.
 | Question | Answer |
 |---|---|
 | One shared cat or one per visitor? | **Your own cat.** Physics runs in the visitor's browser only. Nothing is written to playhtml or localStorage. |
-| Idle behaviour | **All of it**: roams window tops and the floor, sits and blinks and tracks the pointer with its eyes, follows a parked pointer, naps. |
+| Idle behaviour | Roams window tops and the floor, sits, blinks and naps. Preview feedback replaced constant tracking and parked-pointer following with brief glances and hunting after nearby wiggles. |
 | Phones | **Sits on the bottom edge.** Same component, no platforms, no roaming, can be flicked after a long-press. |
 
 ## Approach
 
-Hand-rolled. One `requestAnimationFrame` loop, a pure physics module, a pure
+Hand-rolled. One cat `requestAnimationFrame` loop, a pure physics module, a pure
 behaviour state machine, and platforms read each frame from the DOM rects of
-visible window title bars. No new dependency.
+visible window title bars. An optional yarn toy runs its own physics/string
+loop only while present. Both pause in hidden tabs and clean up on unmount.
+No new dependency.
 
 Rejected: matter.js (about 80 KB for one rigid body, and platforms would still
 need syncing every frame) and CSS-only animation (cannot throw a ball).
@@ -46,9 +56,18 @@ need syncing every frame) and CSS-only animation (cannot throw a ball).
 ```
 src/wcat/
   physics.ts     pure: step(state, dt, world) -> state. Gravity, bounds, platforms.
-  brain.ts       pure: state machine over {sit, walk, jump, follow, nap, fall, ball}.
+  brain.ts       pure: idle, affection and hunting states, plus bounded gaze.
                  Takes an injected clock and random so tests are deterministic.
-  Wcat.tsx       the component: rAF loop, pointer handling, writes transform to
+  senses.ts      pure: recognizes gentle head strokes and nearby reversals.
+  world.ts       reads visible title bars and layer bounds before frame writes.
+  exploration.ts pure: visit eligibility, inspection and entry decisions.
+                 Also reads exposed icons and available room hosts.
+  tail.ts        SVG curve poses and frame-rate-independent smoothing.
+  yarn.ts        private ball physics and a constrained, trailing string.
+  toy-brain.ts   bounded pursuit, crouching, pouncing, batting and boredom.
+  YarnToy.tsx    local palette control, pointer/keyboard handling and toy loop.
+  Wcat.tsx       one-cat residence coordinator, private visited-app set and portals.
+  Cat.tsx        the component: rAF loop, pointer handling, writes transform to
                  the element through a ref. React state only for form and mood.
 src/index.css    cat and ball shapes, blink keyframes, morph transition.
 ```
@@ -62,14 +81,32 @@ the cat element itself has `pointer-events: auto`. On phones the layer is
 ## Look
 
 A 44 px black cat built from CSS shapes in one element: rounded body, two
-triangle ears, a curved tail. Face per the reference above, scaled to the
-body. Eyes blink every 3 to 6 s (scaleY to 0.1 for 120 ms) and shift 2 px
-toward the pointer. Facing flips with `scaleX(-1)` on the body only, never
+triangle ears, and a flat SVG tail. Its fixed base sits behind a foreground
+body shape, with only the outer curve swishing. Constant-width ink stays
+above the feet; no perspective, depth scaling or rotating tail plane.
+Face per the reference above, scaled to the body. Eyes blink every 3 to 6 s
+(scaleY to 0.1 for 120 ms). Attention bouts track the live pointer for 2 to
+3.5 seconds, with 8 to 14 seconds between opportunities. They can include
+a little walking on the same surface. Sleeping and petting eyes stay
+closed and centered. Facing flips with `scaleX(-1)` on the body only, never
 the face container, so the mouth stays symmetric.
+
+Sleep has a small staggered `zZZ` animation beside the head. The marks face
+inward near the right viewport edge. Waking holds the eyes 45% open for
+650 ms before sitting or reacting to a poke/pet. Lifting still happens
+immediately. Reduced motion keeps the sleep marks visible but still.
 
 Ball form: a 36 px black circle, ears and tail hidden, face kept and rotated
 by distance rolled divided by radius. Morph is a 150 ms transition on width,
 height and border-radius.
+
+The sticker palette is raised to leave room for the cat along the floor.
+Remote cursors now render in a clipped `#play-cursors` layer. Without it,
+a desktop visitor's off-screen cursor enlarges a phone's layout viewport.
+Keyboard users poke with Enter, lift/drop with Space, move with arrows, and
+drop with Escape or Enter while held. Instructions are available in English
+and Spanish. Pointer clicks and phone taps poke; gentle unpressed strokes
+over the head pet. Dragging still uses the same thresholds.
 
 ## World
 
@@ -85,12 +122,28 @@ height and border-radius.
 
 | State | Enter | Behaviour | Leave |
 |---|---|---|---|
-| sit | after landing, after walk, after wake | blink, eyes toward pointer | random 2 to 8 s → walk; pointer parked → follow; 45 s no pointer → nap |
+| sit | after landing, after walk, after wake | blink, occasional short glance | random 2 to 8 s → walk; nearby teasing → stalk; 45 s inactivity → nap |
 | walk | from sit | 70 px/s along the current surface, flip at edges | reached edge → jump or turn; random 1 to 4 s → sit |
-| jump | from walk or follow | parabola to a platform within 260 px sideways and 180 px up, launch velocity from the gap; no target → drop to the floor | landing → sit (or follow if still following) |
-| follow | pointer still 1.5 s inside the desktop and more than 120 px away | walk toward pointer x; jump toward a surface under it when reachable | within 40 px → sit; 6 s elapsed → sit; pointer moves → sit |
-| nap | 45 s without pointer movement | eyes closed, body 10% flatter | pointer within 150 px or any drag → sit |
+| jump | from walk | parabola to a platform within 260 px sideways and 180 px up, launch velocity from the gap; no target → drop to the floor | landing → sit |
+| stalk | two nearby pointer reversals within 1.2 s, outside the head | creep at 36 px/s for 450 ms, watch the toy | crouch; pointer out of reach → sit |
+| crouch | after stalking | flatten, wiggle and hold the last toy position for 550 ms | pounce; pointer out of reach → sit |
+| pounce | after crouching | short arc toward the last target on the same ledge or floor | landing → sit; 8 to 13 s cooldown from hunt start |
+| follow | a short attention bout, reachable moving pointer | follow at up to 90 px/s, track live pointer | pointer settles, comes close or leaves reach; bout expires |
+| pet | slow unpressed head strokes, two horizontal reversals, at least 70 px over 650 ms | stop, lean, close eyes into happy arches | 1.4 s without strokes → sit |
+| poke | click, tap or Enter | stop, brief startle and ear flick | 650 ms → sit |
+| nap | 45 s without pointer movement or affection | eyes closed and still, body 10% flatter, rising zZZ | fresh movement within 110 px or poke/pet → wake; lift → ball |
+| wake | waking from a nap | eyes half-open and still, body 5% flatter, sleep marks hidden | 650 ms → sit or the requested poke/pet reaction |
 | fall | the surface under the feet is gone (window closed, minimized or moved) | gravity, land on the first platform below or the floor, squash 120 ms | landing → sit |
+| peek | 40% chance on each window-edge approach | stop, lean and look down for 650 to 1150 ms | continue without rerolling at the same edge |
+| dizzy | hard spinning throw meets the thresholds below | wobble, spiral eyes, loose tail | 3 s → sit; reduced motion skips it |
+| inspect | eligible exposed desktop icon after an idle delay | look toward the icon and tilt the head for 1.1 s | 60% → enter; otherwise resume resting |
+| enter | after choosing an icon | tuck the tail and shrink along an 800 ms arc | icon badge; opening the app → room cat |
+
+Implementation correction: floor jumps may reach the lowest nearby window
+top regardless of its height. Normal windows are taller than 180 px, and
+their drag bounds otherwise make every top unreachable from the floor.
+Jumps between windows retain the 180 px limit. Clearance above the target
+is capped by the ceiling. An isolated cat walks off an edge before falling.
 
 ## Ball
 
@@ -99,21 +152,70 @@ height and border-radius.
   `src/play/drag.ts`. Form becomes ball, position follows the pointer.
 - Throw: on release, velocity is the mean over the last 80 ms of samples,
   capped at 1800 px/s.
+- Gentle placement: release at no more than 180 px/s with the feet within
+  64 px above or 36 px below a window top. The whole body must fit across
+  that top. Choose the nearest eligible top, show a landing line while held,
+  then sit for at least five seconds. Canceled drags do not snap.
 - Flight: gravity, bounce off the four bounds with restitution 0.72, roll on
   the floor with friction (velocity x times 0.985 per frame at 60 Hz, scaled
-  by dt). The ball ignores windows.
-- Rest: speed under 40 px/s while on the floor for 300 ms → unroll into cat
+  by dt). The ball ignores windows, but collides with a live selection box.
+- Rest: speed under 40 px/s on the floor or selection top for 300 ms → unroll into cat
   form → sit.
-- `prefers-reduced-motion`: no roam, follow or nap. Drag still works. Release
+- Dizziness requires a launch of at least 1300 px/s, three full rotations
+  while moving horizontally at least 600 px/s, and one impact of at least
+  450 px/s. Every lift/release resets these counters. A gentle or vertical
+  toss does not qualify just because it bounces.
+- `prefers-reduced-motion`: no roam or hunting. Sleep marks and pet/poke
+  feedback are still, without animation. Drag still works. Release
   drops straight down with no bounce and lands as a cat.
 
 ## Phones
 
 Same component. Floor at the viewport bottom minus 8 px, no platforms, brain
-restricted to sit. Long-press to lift so a normal swipe still scrolls. The
-ball bounces off the viewport edges like on desktop.
+restricted to sit, sleep/wake and affection reactions. Tap to poke, long-press to lift
+so a normal swipe still scrolls. The ball bounces off the viewport edges like
+on desktop. Touch movement does not trigger mouse-style petting or hunting.
+
+## Yarn toy and selection boxes
+
+The 🧶 palette control toggles one local yarn ball. It is not a shared
+sticker, never enters playhtml, and resets on reload. Drag to throw, hold
+first on touch, or use Space/Enter and arrows. Right-click or Delete removes
+it. A 14-point constrained string follows the ball and respects the floor,
+viewport and selection box. Reduced motion uses a still string and straight
+drops. Phones retain the bottom-edge cat behavior, without a chase.
+
+A fresh throw can start a desktop play session lasting 7 to 13 seconds.
+The cat pursues, crouches, pounces and bats the ball away, then turns away
+and ignores fresh throws for 10 to 18 seconds. Batting or repeated throws
+do not extend that session. Holding the toy pauses pursuit, not the interest
+timer. Direct cat interaction, sleep, app residence and reduced motion take
+priority. Picking up the cat ends play.
+
+The live selection rectangle is solid on all four sides. Moving or growing
+it resolves existing overlaps. Its top is a temporary platform: the cat
+clears the side before crossing onto it, and falls when selection ends.
+This rectangle stays local with the desktop's existing selection state.
+
+Right-clicking a placed emoji removes only that instance from its shared
+room. Palette entries remain. The private yarn's removal affects only this
+visitor. Secondary mouse buttons never start a sticker/window drag.
 
 ## Not stored, not shared
+
+Desktop app visits wait 22 to 40 seconds between opportunities. Only
+exposed, closed desktop icons qualify. A new app can invite a visit even
+on a busy desktop; a previously visited app requires fewer than two open
+windows. The visited set lasts for this page session only. Interactions,
+sleep, mobile and reduced motion take priority over exploration.
+
+An entered icon has a small cat-face badge. Opening its app mounts the
+same visitor's cat in a clipped overlay inside the content area, below
+the title bar. That overlay follows the window and does not scroll with
+its content. Closing/minimizing restores the badge; reopening/restoring
+brings the cat back. Drag outside the window and release to return it to
+the desktop. The room's play area avoids an overlapping sticker dock.
+Only one cat or dormant badge watcher runs at a time.
 
 Every load starts the cat on the floor at 35% of the width, facing right.
 Nothing goes to playhtml or localStorage. If the owner later wants a shared
@@ -131,22 +233,51 @@ PointerEvent and pointer capture.
   right bound reflects vx times 0.72; a ball on the floor loses speed and
   reports rest; a falling cat whose x is over a platform stops at its top.
 - `brain.test.ts`: sit → walk after the timer; surface removed → fall → sit
-  on landing; 45 s idle → nap and pointer within 150 px → sit; pointer parked
-  far away → follow; follow gives up after 6 s.
+  on landing; 45 s idle → nap; fresh nearby movement wakes; glances expire;
+  parked pointers are ignored; stalk → crouch → pounce; hunt cancels or cools
+  down; affection wakes; mobile/reduced-motion restrictions hold.
+- `senses.test.ts`: head strokes versus hover/fast passes; nearby reversals
+  versus navigation, distant motion and stale history; bounded sample count.
+- `tail.test.ts`: curve continuity, pose differences, easing and still
+  reduced-motion poses. `exploration.test.ts`: delays, enter/decline,
+  open-window and visited-app eligibility, cancellation.
 - `Wcat.test.tsx`: renders with `data-form="cat"`; pointerdown plus 40 px
   move → `data-form="ball"`; pointerup then advancing fake timers past rest
-  → `data-form="cat"`; on the mobile branch no platforms are queried.
+  → `data-form="cat"`; on the mobile branch no platforms are queried; sleeping
+  eyes do not move; actual input events trigger affection and hunting.
 - `scripts/gate/verify.mjs`: add a desktop check (cat present, drag 200 px →
   ball, ends as a cat on the floor with no page errors) and a mobile check
   (cat present at the bottom edge).
+- `scripts/gate/verify-wcat-behavior.mjs`: real mouse, keyboard and touch
+  input with a controlled clock. Checks visible sleep, affection and hunting
+  poses without changing private cat state.
+- `scripts/gate/verify-wcat-handling.mjs`: placement, live gaze, cooldown,
+  tail movement, edge decisions, dizziness, icon badge, app open/close/
+  minimize/restore, visible room hit target and dragging back outside.
+- `yarn.test.ts`: flight, string constraints, batting, bounded interest,
+  cooldown, interruption and reduced motion. Selection collision and jump
+  regressions live in the physics, world and brain tests.
+- `scripts/gate/verify-stickers-tail.mjs`: shared removal across two visitors,
+  primary-button dragging and flat rear-tail geometry/poses.
+- `scripts/gate/verify-wcat-toy.mjs`: private toy, throws, string, play phases,
+  boredom, keyboard/removal, reduced motion, live wall bounces and perching.
 
 ## Budget
 
-About 450 lines including tests. Roughly 6 KB more in the bundle. Test the
-frame loop's cost with the Performance panel while ten windows are open; the
-DOM reads are the only per-frame work that scales.
+The original estimate was 450 lines including tests. The first implementation
+was about 820 lines in `src/wcat/`, including tests, plus CSS and browser checks.
+Touch cancellation, keyboard controls, and viewport integration account for
+the additional code. The behavior refinement adds gesture recognition and
+regression tests. No runtime dependency was added.
+
+On this PC, a five-second profile of the yarn preview with ten windows open
+measured 59 callbacks for each loop. Cat callbacks took 0.46 ms mean,
+0.80 ms p95 and 0.90 ms maximum. Yarn callbacks took 1.00 ms mean,
+2.10 ms p95 and 2.50 ms maximum. These are separate callback timings,
+not total rendering or page FPS.
+Headless WebGL on this PC makes the full page substantially slower.
 
 ## Out of scope
 
-Sounds, more than one cat, persistence, sharing, the cat reacting to
-stickers, the cat pushing windows.
+Sounds, more than one cat, persistence, sharing the cat or yarn, the cat
+reacting to ordinary shared stickers, and the cat pushing windows.

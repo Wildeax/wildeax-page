@@ -62,6 +62,9 @@ function App() {
         </Suspense>
 
         <StickerLayer />
+        {/* Remote document coordinates can exceed a phone's width. Clip the
+            cursor layer so those cursors never enlarge its layout viewport. */}
+        <div id="play-cursors" aria-hidden="true" className="pointer-events-none absolute inset-0 z-[70] overflow-hidden" />
       </div>
     </PlayRoot>
   )

@@ -73,7 +73,7 @@ export function PlayableSurface({ caps, transform, onTransform, children, handle
 
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!canMove) return
+      if (!canMove || e.button !== 0 || e.isPrimary === false) return
       const target = e.target as Element
       if (target.closest(NO_DRAG_SELECTOR) && !target.closest(DRAG_OK_SELECTOR)) return
       if (handle && !target.closest(handle)) return

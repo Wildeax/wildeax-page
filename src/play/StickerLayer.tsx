@@ -50,7 +50,12 @@ export function StickerLayer() {
           // straight back into the shared list. Replacing the whole array per
           // pointer move is chatty but fine at the 300 cap.
           return (
-            <div key={s.id} className="pointer-events-auto absolute left-0 top-0">
+            <div key={s.id} data-sticker={s.id} data-sticker-kind={s.kind} className="pointer-events-auto absolute left-0 top-0"
+              onContextMenu={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setStickers(placed.filter((sticker) => sticker.id !== s.id))
+              }}>
               <PlayableSurface
                 caps={['move']}
                 transform={{ x: s.x, y: s.y, rotation: s.rotation, scale: s.scale }}
@@ -93,7 +98,7 @@ export function StickerLayer() {
       )}
 
       {/* Palette dock. */}
-      <div className="fixed bottom-4 left-1/2 z-40 flex md:bottom-14 -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur">
+      <div data-sticker-dock className="fixed bottom-16 left-1/2 z-40 flex md:bottom-24 -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur">
         {STICKER_KINDS.map((kind) => (
           <button
             key={kind.id}

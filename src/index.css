@@ -85,3 +85,116 @@
 .os-pop {
   animation: os-open 260ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
+
+/* wcat's layer never catches wallpaper gestures. Only the 44 px pet does. */
+.wcat-layer { position: absolute; inset: 0; z-index: 35; pointer-events: none; overflow: clip; }
+.wcat-landing { position: absolute; top: 0; left: 0; width: 48px; height: 2px; border-radius: 2px; background: #b0f4ff; box-shadow: 0 0 7px #67e8f9; visibility: hidden; pointer-events: none; }
+.wcat-mobile { position: fixed; height: 100dvh; }
+.wcat-yarn-layer { position: absolute; inset: 0; z-index: 36; pointer-events: none; overflow: clip; }
+.wcat-yarn-layer.wcat-mobile { position: fixed; height: 100dvh; }
+.wcat-string { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.wcat-yarn { position: absolute; top: 0; left: 0; width: 36px; height: 36px; padding: 0; border: 0; background: none; visibility: hidden; pointer-events: auto; cursor: grab; touch-action: pan-y; user-select: none; font-size: 32px; line-height: 1; }
+.wcat-yarn > span { display: block; transform: rotate(var(--yarn-roll, 0rad)); }
+.wcat-yarn[data-held="true"] { cursor: grabbing; }
+.wcat-yarn:focus-visible { outline: 2px solid #67e8f9; outline-offset: 4px; border-radius: 50%; }
+.wcat {
+  position: absolute; top: 0; left: 0; width: 44px; height: 44px;
+  padding: 0; border: 0; background: none; visibility: hidden;
+  pointer-events: auto; cursor: grab; touch-action: pan-y;
+  user-select: none; -webkit-touch-callout: none; will-change: transform;
+  transition: width 150ms ease, height 150ms ease;
+}
+.wcat:focus-visible { outline: 2px solid #67e8f9; outline-offset: 5px; border-radius: 12px; }
+.wcat[data-held="true"] { cursor: grabbing; }
+.wcat-art { position: absolute; inset: 0; transform-origin: 50% 100%; }
+.wcat-silhouette {
+  position: absolute; inset: 5px 0 0;
+  border-radius: 42% 42% 32% 32%; transform: scaleX(var(--wcat-facing, 1));
+  transition: border-radius 150ms ease;
+}
+.wcat-body { position: absolute; inset: 0; z-index: 1; background: #050505; border-radius: inherit; box-shadow: 0 1px 0 rgb(255 255 255 / 10%); }
+.wcat-ear { position: absolute; top: -5px; z-index: 2; width: 15px; height: 17px; background: #050505; }
+.wcat-ear-left { left: 0; clip-path: polygon(0 0, 100% 65%, 10% 100%); }
+.wcat-ear-right { right: 0; clip-path: polygon(100% 0, 90% 100%, 0 65%); }
+.wcat-tail {
+  position: absolute; left: -22px; top: -6px; width: 52px; height: 54px;
+  z-index: 0; color: #050505; pointer-events: none; overflow: visible;
+}
+.wcat-face { position: absolute; inset: 0; transform: rotate(var(--wcat-roll, 0rad)); }
+.wcat-eyes {
+  position: absolute; top: 31%; left: 14%; width: 72%; height: 22%;
+  display: flex; justify-content: space-between;
+  transform: translate(var(--wcat-eye-x, 0px), var(--wcat-eye-y, 0px));
+  transition: transform 180ms ease-out;
+}
+.wcat-eyes > span { width: 30.56%; height: 100%; border-radius: 50%; background: #fff; }
+.wcat-eye-spiral { display: none; width: 100%; height: 100%; color: #fff; }
+.wcat[data-attention="true"] .wcat-eyes { transition-duration: 80ms; }
+.wcat-mouth { position: absolute; left: 40%; top: 61%; width: 20%; height: 9%; }
+.wcat-mouth::before, .wcat-mouth::after {
+  content: ''; position: absolute; top: 0; left: 50%; width: 65%; height: 2px;
+  border-radius: 2px; background: #fff; transform-origin: 0 50%;
+}
+.wcat-mouth::before { transform: rotate(138deg); }
+.wcat-mouth::after { transform: rotate(42deg); }
+.wcat[data-blink="true"] .wcat-eyes > span, .wcat[data-mode="nap"] .wcat-eyes > span,
+.wcat[data-mode="pet"] .wcat-eyes > span { transform: scaleY(0.1); }
+.wcat[data-mode="nap"] .wcat-eyes, .wcat[data-mode="wake"] .wcat-eyes,
+.wcat[data-mode="pet"] .wcat-eyes { transform: none; transition: none; }
+.wcat[data-mode="nap"] .wcat-art { transform: scaleY(0.9); }
+.wcat[data-mode="wake"] .wcat-eyes > span { transform: scaleY(0.45); }
+.wcat[data-mode="wake"] .wcat-art { transform: scaleY(0.95); }
+.wcat-sleep {
+  position: absolute; left: calc(100% + 4px); top: 2px; width: 32px; height: 24px;
+  pointer-events: none; visibility: hidden; color: #c0ced6;
+  font-family: ui-monospace, monospace; font-weight: 600; line-height: 1;
+  text-shadow: 0 1px 3px #000;
+}
+.wcat[data-mode="nap"] .wcat-sleep { visibility: visible; }
+.wcat-sleep > span { position: absolute; opacity: 0; }
+.wcat-sleep > span:nth-child(1) { left: 0; top: 10px; font-size: 8px; }
+.wcat-sleep > span:nth-child(2) { left: 10px; top: 4px; font-size: 10px; --wcat-z-delay: 550ms; }
+.wcat-sleep > span:nth-child(3) { left: 21px; top: -3px; font-size: 12px; --wcat-z-delay: 1100ms; }
+.wcat[data-mode="nap"] .wcat-sleep > span { animation: wcat-sleep 2400ms ease-out var(--wcat-z-delay, 0ms) infinite; }
+.wcat[data-sleep-side="left"] .wcat-sleep { left: auto; right: calc(100% + 4px); --wcat-z-drift: -4px; }
+.wcat[data-sleep-side="left"] .wcat-sleep > span:nth-child(1) { left: 21px; }
+.wcat[data-sleep-side="left"] .wcat-sleep > span:nth-child(3) { left: 0; }
+.wcat[data-squash="true"][data-form="cat"] .wcat-art { animation: wcat-land 120ms ease-out; }
+.wcat[data-mode="stalk"] .wcat-art { transform: scale(1.06, 0.88); }
+.wcat[data-mode="crouch"] .wcat-art { animation: wcat-ready 180ms ease-in-out infinite alternate; }
+.wcat[data-mode="stalk"] .wcat-eyes > span, .wcat[data-mode="crouch"] .wcat-eyes > span { transform: scaleY(0.68); border-radius: 40% 40% 50% 50%; }
+.wcat[data-mode="follow"] .wcat-eyes > span { transform: scaleY(1.06); }
+.wcat[data-mode="pounce"] .wcat-art { transform: scale(0.92, 1.1); }
+.wcat[data-mode="pounce"] .wcat-eyes > span { transform: scale(1.06, 1.12); }
+.wcat[data-mode="pet"] .wcat-art { animation: wcat-pet 900ms ease-in-out infinite alternate; }
+.wcat[data-mode="pet"] .wcat-eyes > span { height: 45%; margin-top: 15%; background: none; border-top: 2px solid #fff; border-radius: 50% 50% 0 0; transform: none; }
+.wcat[data-mode="poke"] .wcat-art { animation: wcat-poke 650ms ease-out; }
+.wcat[data-mode="poke"] .wcat-ear-left { transform: rotate(-18deg); }
+.wcat[data-mode="poke"] .wcat-ear-right { transform: rotate(18deg); }
+.wcat[data-mode="poke"] .wcat-eyes > span { transform: scaleY(1.12); }
+.wcat[data-mode="peek"] .wcat-art { transform: rotate(calc(var(--wcat-facing) * 7deg)); }
+.wcat[data-mode="peek"] .wcat-face { transform: translateY(2px); }
+.wcat[data-mode="peek"] .wcat-eyes > span { transform: scaleY(0.8); }
+.wcat[data-mode="inspect"] .wcat-art { transform: rotate(calc(var(--wcat-facing) * 8deg)); }
+.wcat[data-mode="inspect"] .wcat-eyes > span:first-child { transform: scaleY(0.72); }
+.wcat[data-mode="enter"] .wcat-art { transform: scale(calc(1 - var(--wcat-enter) * 0.8)); opacity: calc(1 - var(--wcat-enter) * 0.5); }
+.wcat-icon-badge { position: absolute; right: 9px; top: 34px; display: grid; place-items: center; width: 21px; height: 21px; color: #050607; background: #a5f3fc; border: 1px solid #67e8f9; border-radius: 50%; box-shadow: 0 1px 5px #0009; pointer-events: none; }
+.wcat-icon-badge svg { width: 17px; height: 17px; }
+.wcat[data-mode="dizzy"] .wcat-art { animation: wcat-dizzy 750ms ease-in-out infinite alternate; }
+.wcat[data-mode="dizzy"] .wcat-eyes > span { background: none; border-radius: 0; transform: none; }
+.wcat[data-mode="dizzy"] .wcat-eye-spiral { display: block; }
+.wcat[data-mode="dizzy"] .wcat-mouth { transform: rotate(-14deg); }
+.wcat[data-form="ball"] { width: 36px; height: 36px; }
+.wcat[data-form="ball"] .wcat-silhouette { inset: 0; border-radius: 50%; }
+.wcat[data-form="ball"] .wcat-ear, .wcat[data-form="ball"] .wcat-tail { display: none; }
+.wcat[data-held="true"] .wcat-art { filter: drop-shadow(0 6px 5px rgb(0 0 0 / 35%)); }
+@keyframes wcat-land { from { transform: scale(1.08, 0.86); } to { transform: scale(1); } }
+@keyframes wcat-ready { from { transform: translateX(-1px) scale(1.12, 0.74); } to { transform: translateX(1px) scale(1.1, 0.78); } }
+@keyframes wcat-pet { from { transform: rotate(-5deg) scale(1.04, 0.92); } to { transform: rotate(3deg) scale(1.02, 0.96); } }
+@keyframes wcat-poke { 15% { transform: translateY(-5px) scale(0.92, 1.12); } 40% { transform: scale(1.1, 0.88); } 70%, 100% { transform: none; } }
+@keyframes wcat-dizzy { from { transform: translateX(-1px) rotate(-6deg); } to { transform: translateX(1px) rotate(6deg); } }
+@keyframes wcat-sleep { 0% { opacity: 0; transform: translate(0, 3px); } 25%, 60% { opacity: 0.8; } 100% { opacity: 0; transform: translate(var(--wcat-z-drift, 4px), -9px); } }
+@media (prefers-reduced-motion: reduce) {
+  .wcat, .wcat * { animation: none !important; transition: none !important; }
+  .wcat-sleep > span { opacity: 0.75; transform: none; }
+}

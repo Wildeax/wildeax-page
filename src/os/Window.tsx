@@ -62,7 +62,10 @@ export function Window({ id, title, hidden, onClose, onFocus, onMinimize, childr
           </button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 text-sm text-zinc-300">{children}</div>
+      <div className="relative min-h-0 flex-1">
+        <div className="h-full overflow-y-auto px-4 py-3 text-sm text-zinc-300">{children}</div>
+        <div data-wcat-room={id} className="pointer-events-none absolute inset-0 overflow-hidden" />
+      </div>
     </div>
   )
 }

@@ -144,7 +144,7 @@ export function PlayRoot({ children, pathname }: { children: ReactNode; pathname
           // enum ("page" | "domain" | "section"); "domain" shows cursors across
           // the whole site. Cursors are ephemeral, so a ROOM bump does not need
           // to touch them.
-          cursors: { enabled: !reducedMotion, room: 'domain' },
+          cursors: { enabled: !reducedMotion, room: 'domain', container: '#play-cursors' },
         }}
       >
         {children}
