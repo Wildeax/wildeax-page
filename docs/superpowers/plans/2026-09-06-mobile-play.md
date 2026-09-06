@@ -14,6 +14,12 @@ This replaces the earlier quiet-phone behavior. Work is on `feat/mobile-play`.
   back onto it. Walk off an available edge; crouch/drop through a full-width
   one-way card top. Stationary yarn loses interest after 2.25 seconds without
   movement, with the existing cooldown and a hard cap on even active play.
+- The next feedback pass makes pursuit alternate randomized 0.3–0.95 second
+  sprints with 0.45–1.55 second stalking beats. Sprint speed caps at 330 px/s;
+  stalking caps at 145 px/s. It lowers the whole tail three pixels while the
+  body still covers its base. Starting a desktop marquee clears any current
+  browser selection, cancels native selection and applies `user-select: none`
+  until release.
 - Add explicit Pet and Tilt controls. Tilt calibrates to the held angle,
   supports screen rotation, ignores invalid/stale data, filters jitter and
   limits speed. It rolls yarn and a thrown cat, and makes a standing cat
@@ -40,7 +46,7 @@ References: [device orientation permissions](https://developer.mozilla.org/en-US
 
 ## Verification and preview
 
-- 240 unit/component tests pass with one worker; production build passes.
+- 241 unit/component tests pass with one worker; production build passes.
   Changed TypeScript files lint cleanly. Full lint still reports the existing
   19 errors and one warning in i18n/index and reactbits.
 - Observed the new ball-platform, tilt, mobile-perch, permission-lifecycle,
@@ -71,3 +77,12 @@ References: [device orientation permissions](https://developer.mozilla.org/en-US
   The external Workers Builds check also fails on this commit, as on prior
   main: `https://github.com/Wildeax/wildeax-page/runs/101521368113`.
   Local build/tests and manual hosted preview upload pass; do not call CI green.
+- Latest runtime commit: `08d46e9`. Review version:
+  `b1e79cd7-d99c-43d0-9726-1ac405e1bec5`, bundle `index-Ch5vI-PA.js`, URL
+  `https://b1e79cd7-wildeax-page.arena-riot-proxy.workers.dev/?room=phone-review-b1e79cd7`.
+  The current preview passed 100/100 relevant hosted checks: 34 main, 18
+  sticker/tail, 23 yarn/selection and 25 mobile-play. The shared-sticker gate
+  initially raced a peer acknowledgement twice; adding a 500ms settling wait
+  made its network ordering explicit, and the full gate then passed.
+  Workers Builds still fails at `https://github.com/Wildeax/wildeax-page/runs/101524117667`.
+  Production remains 100% version `5ce57800-77ec-412e-8293-f2bc146672f4`.

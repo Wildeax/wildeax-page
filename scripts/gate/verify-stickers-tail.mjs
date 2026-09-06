@@ -45,10 +45,14 @@ try {
   await other.waitForFunction(() => document.querySelectorAll('[data-sticker]').length === 1, null, { timeout: 15000 })
   check('removal reaches the other visitor', await other.locator(`[data-sticker="${removedId}"]`).count() === 0)
   check('right-click does not open the desktop Refresh menu', await page.getByRole('menu').count() === 0)
+  // Let the original page consume the peer acknowledgement before beginning
+  // another write. Otherwise a slow preview socket can replay the removal
+  // over the first drag update and make this check race the network.
+  await page.waitForTimeout(500)
   const kept = page.locator(`[data-sticker="${keptId}"] span`)
   await kept.click()
   const before = await kept.boundingBox()
-  await page.mouse.move(before.x + 12, before.y + 12)
+  await kept.hover()
   await page.mouse.down()
   await page.mouse.move(before.x - 65, before.y + 75, { steps: 8 })
   await page.mouse.up()
