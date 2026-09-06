@@ -2,11 +2,19 @@ import { CAT_SIZE } from './physics'
 import type { World } from './physics'
 
 /** All layout reads happen together, before the frame writes the cat transform. */
-export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: boolean): World & { left: number; top: number } {
+export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: boolean, room = false): World & { left: number; top: number } {
   const rect = layer.getBoundingClientRect()
   const width = rect.width || window.innerWidth
   const height = rect.height || window.innerHeight
   const world = { width, floor: Math.max(CAT_SIZE, height - (mobile ? 8 : 44)), left: rect.left, top: rect.top, reducedMotion }
+  if (room) {
+    const dock = layer.ownerDocument.querySelector('[data-sticker-dock]')?.getBoundingClientRect()
+    // A room stays in its window's stacking context. Reserve the portion
+    // above the foreground dock instead of leaving an unreachable cat behind it.
+    if (dock && dock.width && dock.right > rect.left && dock.left < rect.right && dock.top > rect.top && dock.top < rect.bottom) {
+      world.floor = Math.max(CAT_SIZE, Math.min(world.floor, dock.top - rect.top - 4))
+    }
+  }
   if (mobile) return { ...world, platforms: [] }
   const root = layer.parentElement ?? layer
   const platforms = [...root.querySelectorAll<HTMLElement>('[data-window]:not([hidden]) [data-drag-handle]')].flatMap((el) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createBody, GRAVITY, step, throwVelocity } from './physics'
+import { createBody, GRAVITY, placeGently, releaseBody, shouldBeDizzy, step, throwVelocity } from './physics'
 import type { Body, World } from './physics'
 
 const world: World = { width: 800, floor: 600, platforms: [] }
@@ -108,5 +108,53 @@ describe('throw sampling', () => {
   it('does not throw after a pause or divide by zero', () => {
     expect(throwVelocity([{ x: 10, y: 10, at: 1 }, { x: 10, y: 10, at: 1.2 }])).toEqual({ vx: 0, vy: 0 })
     expect(throwVelocity([{ x: 10, y: 10, at: 1 }, { x: 20, y: 20, at: 1 }])).toEqual({ vx: 0, vy: 0 })
+  })
+})
+
+describe('gentle placement and rough throws', () => {
+  const bounds = { ...world, platforms: [{ id: 'window', left: 100, right: 500, y: 300 }] }
+  const held = { ...createBody(bounds), form: 'ball' as const, y: 310, ground: null }
+
+  it('unrolls a gentle release onto a nearby title bar and stays supported', () => {
+    const placed = releaseBody(held, { vx: 40, vy: 20 }, bounds)
+    expect(placed).toMatchObject({ form: 'cat', ground: 'window', y: 300, vx: 0, vy: 0 })
+    expect(step(placed, 0.1, bounds).ground).toBe('window')
+    expect(placeGently({ ...held, y: 260 }, { vx: 0, vy: 0 }, bounds)?.y).toBe(300)
+  })
+
+  it('does not magnetize fast throws, distant drops, off-edge releases or canceled gestures', () => {
+    expect(placeGently(held, { vx: 300, vy: 0 }, bounds)).toBeNull()
+    expect(placeGently({ ...held, y: 200 }, { vx: 0, vy: 0 }, bounds)).toBeNull()
+    expect(placeGently({ ...held, x: 95 }, { vx: 0, vy: 0 }, bounds)).toBeNull()
+    expect(placeGently(held, { vx: 0, vy: 0 }, world)).toBeNull()
+    expect(releaseBody(held, { vx: 0, vy: 0 }, bounds, false).form).toBe('ball')
+    expect(releaseBody(held, { vx: 300, vy: 0 }, { ...bounds, reducedMotion: true }).form).toBe('ball')
+  })
+
+  it('chooses the closest eligible top without depending on DOM order', () => {
+    const platforms = [...bounds.platforms, { id: 'closer', left: 100, right: 500, y: 315 }]
+    expect(placeGently(held, { vx: 0, vy: 0 }, { ...bounds, platforms })?.ground).toBe('closer')
+    expect(placeGently(held, { vx: 0, vy: 0 }, { ...bounds, platforms: [...platforms].reverse() })?.ground).toBe('closer')
+  })
+
+  it('gets dizzy only after a hard launch with fast turns and an impact', () => {
+    const hard = releaseBody({ ...held, y: 450 }, { vx: 1650, vy: -300 }, world)
+    const result = advance(hard, 10)
+    expect(result.fastTurns).toBeGreaterThanOrEqual(3)
+    expect(result.hardImpacts).toBeGreaterThan(0)
+    expect(shouldBeDizzy(result)).toBe(true)
+    expect(shouldBeDizzy(result, true)).toBe(false)
+    expect(shouldBeDizzy({ ...result, launchSpeed: 700 })).toBe(false)
+    expect(shouldBeDizzy({ ...result, fastTurns: 1 })).toBe(false)
+    expect(shouldBeDizzy({ ...result, hardImpacts: 0 })).toBe(false)
+  })
+
+  it('ordinary tosses and hard vertical drops do not get dizzy or carry over past spin', () => {
+    const toss = advance(releaseBody(held, { vx: 700, vy: -100 }, world), 10)
+    const vertical = advance(releaseBody(held, { vx: 0, vy: -1700 }, world), 10)
+    expect(shouldBeDizzy(toss)).toBe(false)
+    expect(shouldBeDizzy(vertical)).toBe(false)
+    const fresh = releaseBody({ ...held, fastTurns: 30, hardImpacts: 10, launchSpeed: 1800 }, { vx: 0, vy: 0 }, world)
+    expect(fresh).toMatchObject({ fastTurns: 0, hardImpacts: 0, launchSpeed: 0 })
   })
 })

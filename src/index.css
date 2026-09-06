@@ -87,7 +87,8 @@
 }
 
 /* wcat's layer never catches wallpaper gestures. Only the 44 px pet does. */
-.wcat-layer { position: absolute; inset: 0; z-index: 35; pointer-events: none; }
+.wcat-layer { position: absolute; inset: 0; z-index: 35; pointer-events: none; overflow: clip; }
+.wcat-landing { position: absolute; top: 0; left: 0; width: 48px; height: 2px; border-radius: 2px; background: #b0f4ff; box-shadow: 0 0 7px #67e8f9; visibility: hidden; pointer-events: none; }
 .wcat-mobile { position: fixed; height: 100dvh; }
 .wcat {
   position: absolute; top: 0; left: 0; width: 44px; height: 44px;
@@ -109,9 +110,8 @@
 .wcat-ear-left { left: 0; clip-path: polygon(0 0, 100% 65%, 10% 100%); }
 .wcat-ear-right { right: 0; clip-path: polygon(100% 0, 90% 100%, 0 65%); }
 .wcat-tail {
-  position: absolute; right: 34px; bottom: 2px; width: 21px; height: 26px;
-  border: 6px solid #050505; border-right-color: transparent; border-top-color: transparent;
-  border-radius: 50%; transform: rotate(20deg); transform-origin: 100% 90%;
+  position: absolute; left: -22px; top: -6px; width: 52px; height: 54px;
+  color: #050505; pointer-events: none; overflow: visible;
 }
 .wcat-face { position: absolute; inset: 0; transform: rotate(var(--wcat-roll, 0rad)); }
 .wcat-eyes {
@@ -121,6 +121,8 @@
   transition: transform 180ms ease-out;
 }
 .wcat-eyes > span { width: 30.56%; height: 100%; border-radius: 50%; background: #fff; }
+.wcat-eye-spiral { display: none; width: 100%; height: 100%; color: #fff; }
+.wcat[data-attention="true"] .wcat-eyes { transition-duration: 80ms; }
 .wcat-mouth { position: absolute; left: 40%; top: 61%; width: 20%; height: 9%; }
 .wcat-mouth::before, .wcat-mouth::after {
   content: ''; position: absolute; top: 0; left: 50%; width: 65%; height: 2px;
@@ -151,26 +153,39 @@
 .wcat[data-sleep-side="left"] .wcat-sleep > span:nth-child(1) { left: 21px; }
 .wcat[data-sleep-side="left"] .wcat-sleep > span:nth-child(3) { left: 0; }
 .wcat[data-squash="true"][data-form="cat"] .wcat-art { animation: wcat-land 120ms ease-out; }
-.wcat[data-mode="walk"] .wcat-tail { animation: wcat-tail 600ms ease-in-out infinite alternate; }
 .wcat[data-mode="stalk"] .wcat-art { transform: scale(1.06, 0.88); }
 .wcat[data-mode="crouch"] .wcat-art { animation: wcat-ready 180ms ease-in-out infinite alternate; }
-.wcat[data-mode="stalk"] .wcat-tail, .wcat[data-mode="crouch"] .wcat-tail { animation: wcat-tail 220ms ease-in-out infinite alternate; }
+.wcat[data-mode="stalk"] .wcat-eyes > span, .wcat[data-mode="crouch"] .wcat-eyes > span { transform: scaleY(0.68); border-radius: 40% 40% 50% 50%; }
+.wcat[data-mode="follow"] .wcat-eyes > span { transform: scaleY(1.06); }
 .wcat[data-mode="pounce"] .wcat-art { transform: scale(0.92, 1.1); }
+.wcat[data-mode="pounce"] .wcat-eyes > span { transform: scale(1.06, 1.12); }
 .wcat[data-mode="pet"] .wcat-art { animation: wcat-pet 900ms ease-in-out infinite alternate; }
-.wcat[data-mode="pet"] .wcat-tail { transform: rotate(42deg); }
+.wcat[data-mode="pet"] .wcat-eyes > span { height: 45%; margin-top: 15%; background: none; border-top: 2px solid #fff; border-radius: 50% 50% 0 0; transform: none; }
 .wcat[data-mode="poke"] .wcat-art { animation: wcat-poke 650ms ease-out; }
 .wcat[data-mode="poke"] .wcat-ear-left { transform: rotate(-18deg); }
 .wcat[data-mode="poke"] .wcat-ear-right { transform: rotate(18deg); }
 .wcat[data-mode="poke"] .wcat-eyes > span { transform: scaleY(1.12); }
+.wcat[data-mode="peek"] .wcat-art { transform: rotate(calc(var(--wcat-facing) * 7deg)); }
+.wcat[data-mode="peek"] .wcat-face { transform: translateY(2px); }
+.wcat[data-mode="peek"] .wcat-eyes > span { transform: scaleY(0.8); }
+.wcat[data-mode="inspect"] .wcat-art { transform: rotate(calc(var(--wcat-facing) * 8deg)); }
+.wcat[data-mode="inspect"] .wcat-eyes > span:first-child { transform: scaleY(0.72); }
+.wcat[data-mode="enter"] .wcat-art { transform: scale(calc(1 - var(--wcat-enter) * 0.8)); opacity: calc(1 - var(--wcat-enter) * 0.5); }
+.wcat-icon-badge { position: absolute; right: 9px; top: 34px; display: grid; place-items: center; width: 21px; height: 21px; color: #050607; background: #a5f3fc; border: 1px solid #67e8f9; border-radius: 50%; box-shadow: 0 1px 5px #0009; pointer-events: none; }
+.wcat-icon-badge svg { width: 17px; height: 17px; }
+.wcat[data-mode="dizzy"] .wcat-art { animation: wcat-dizzy 750ms ease-in-out infinite alternate; }
+.wcat[data-mode="dizzy"] .wcat-eyes > span { background: none; border-radius: 0; transform: none; }
+.wcat[data-mode="dizzy"] .wcat-eye-spiral { display: block; }
+.wcat[data-mode="dizzy"] .wcat-mouth { transform: rotate(-14deg); }
 .wcat[data-form="ball"] { width: 36px; height: 36px; }
 .wcat[data-form="ball"] .wcat-silhouette { inset: 0; border-radius: 50%; }
 .wcat[data-form="ball"] .wcat-ear, .wcat[data-form="ball"] .wcat-tail { display: none; }
 .wcat[data-held="true"] .wcat-art { filter: drop-shadow(0 6px 5px rgb(0 0 0 / 35%)); }
 @keyframes wcat-land { from { transform: scale(1.08, 0.86); } to { transform: scale(1); } }
-@keyframes wcat-tail { from { transform: rotate(10deg); } to { transform: rotate(30deg); } }
 @keyframes wcat-ready { from { transform: translateX(-1px) scale(1.12, 0.74); } to { transform: translateX(1px) scale(1.1, 0.78); } }
 @keyframes wcat-pet { from { transform: rotate(-5deg) scale(1.04, 0.92); } to { transform: rotate(3deg) scale(1.02, 0.96); } }
 @keyframes wcat-poke { 15% { transform: translateY(-5px) scale(0.92, 1.12); } 40% { transform: scale(1.1, 0.88); } 70%, 100% { transform: none; } }
+@keyframes wcat-dizzy { from { transform: translateX(-1px) rotate(-6deg); } to { transform: translateX(1px) rotate(6deg); } }
 @keyframes wcat-sleep { 0% { opacity: 0; transform: translate(0, 3px); } 25%, 60% { opacity: 0.8; } 100% { opacity: 0; transform: translate(var(--wcat-z-drift, 4px), -9px); } }
 @media (prefers-reduced-motion: reduce) {
   .wcat, .wcat * { animation: none !important; transition: none !important; }

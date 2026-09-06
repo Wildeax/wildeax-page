@@ -14,6 +14,9 @@ export interface Body {
   ground: string | null
   angle: number
   rest: number
+  launchSpeed: number
+  fastTurns: number
+  hardImpacts: number
 }
 export interface Sample { x: number; y: number; at: number }
 
@@ -21,7 +24,29 @@ export const clamp = (value: number, min: number, max: number) => Math.max(min, 
 export const sizeOf = (body: Body) => body.form === 'cat' ? CAT_SIZE : BALL_SIZE
 
 export function createBody(world: World): Body {
-  return { x: clamp(world.width * 0.35, CAT_SIZE / 2, world.width - CAT_SIZE / 2), y: world.floor, vx: 0, vy: 0, form: 'cat', ground: 'floor', angle: 0, rest: 0 }
+  return { x: clamp(world.width * 0.35, CAT_SIZE / 2, world.width - CAT_SIZE / 2), y: world.floor, vx: 0, vy: 0, form: 'cat', ground: 'floor', angle: 0, rest: 0, launchSpeed: 0, fastTurns: 0, hardImpacts: 0 }
+}
+
+/** Only a slow release close to a visible top is a placement, not a throw. */
+export function placeGently(body: Body, velocity: { vx: number; vy: number }, world: World): Body | null {
+  if (Math.hypot(velocity.vx, velocity.vy) > 180) return null
+  const platform = world.platforms.filter((p) => p.y >= CAT_SIZE && p.y < world.floor
+    && body.x >= p.left + CAT_SIZE / 2 && body.x <= p.right - CAT_SIZE / 2
+    && body.y >= p.y - 64 && body.y <= p.y + 36)
+    .sort((a, b) => Math.abs(a.y - body.y) - Math.abs(b.y - body.y) || a.id.localeCompare(b.id))[0]
+  return platform ? { ...body, form: 'cat', y: platform.y, vx: 0, vy: 0, ground: platform.id,
+    angle: 0, rest: 0, launchSpeed: 0, fastTurns: 0, hardImpacts: 0 } : null
+}
+
+export function releaseBody(body: Body, velocity: { vx: number; vy: number }, world: World, allowPlacement = true): Body {
+  const placed = allowPlacement ? placeGently(body, velocity, world) : null
+  if (placed) return placed
+  return { ...body, form: 'ball', vx: world.reducedMotion ? 0 : velocity.vx, vy: world.reducedMotion ? 0 : velocity.vy,
+    ground: null, rest: 0, launchSpeed: world.reducedMotion ? 0 : Math.hypot(velocity.vx, velocity.vy), fastTurns: 0, hardImpacts: 0 }
+}
+
+export function shouldBeDizzy(body: Body, reduced = false): boolean {
+  return !reduced && body.launchSpeed >= 1300 && body.fastTurns >= 3 && body.hardImpacts >= 1
 }
 
 export function support(body: Body, world: World): Platform | undefined {
@@ -52,9 +77,10 @@ function integrate(body: Body, dt: number, world: World): Body {
     next.y += next.vy * dt + GRAVITY * dt * dt / 2
     next.vy += GRAVITY * dt
   }
-  if (next.x < radius) { next.x = radius; next.vx = Math.abs(next.vx) * bounce }
-  if (next.x > world.width - radius) { next.x = Math.max(radius, world.width - radius); next.vx = -Math.abs(next.vx) * bounce }
-  if (next.y < size) { next.y = size; next.vy = Math.abs(next.vy) * bounce }
+  const impact = (speed: number) => { if (ball && Math.abs(speed) >= 450) next.hardImpacts = Math.min(20, next.hardImpacts + 1) }
+  if (next.x < radius) { impact(next.vx); next.x = radius; next.vx = Math.abs(next.vx) * bounce }
+  if (next.x > world.width - radius) { impact(next.vx); next.x = Math.max(radius, world.width - radius); next.vx = -Math.abs(next.vx) * bounce }
+  if (next.y < size) { impact(next.vy); next.y = size; next.vy = Math.abs(next.vy) * bounce }
 
   // One-way platforms: the feet must cross the top on the way down. Sort by
   // crossing height so the DOM order cannot make the cat tunnel through one.
@@ -68,6 +94,7 @@ function integrate(body: Body, dt: number, world: World): Body {
     if (crossed) { next.y = crossed.y; next.vy = 0; next.ground = crossed.id }
   }
   if (next.y >= world.floor) {
+    impact(next.vy)
     next.y = world.floor
     next.vy = next.vy > 60 ? -next.vy * bounce : 0
     next.ground = next.vy === 0 ? 'floor' : null
@@ -75,7 +102,11 @@ function integrate(body: Body, dt: number, world: World): Body {
   // Walking beyond a title bar removes support on this step, not a frame later.
   if (!ball && next.ground && !support(next, world)) next.ground = null
   if (ball && next.ground === 'floor') next.vx *= Math.pow(0.985, dt * 60)
-  if (ball) next.angle += (next.x - body.x) / radius
+  if (ball) {
+    const rotation = (next.x - body.x) / radius
+    next.angle += rotation
+    if (Math.abs(body.vx) >= 600) next.fastTurns = Math.min(50, next.fastTurns + Math.abs(rotation) / (2 * Math.PI))
+  }
   next.rest = ball && next.ground === 'floor' && Math.hypot(next.vx, next.vy) < REST_SPEED ? next.rest + dt : 0
   return next
 }

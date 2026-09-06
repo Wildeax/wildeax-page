@@ -402,7 +402,7 @@ export function Desktop() {
         </>
       )}
 
-      <Wcat label={t('os.wcat.help')} />
+      <Wcat label={t('os.wcat.help')} insideLabel={t('os.wcat.inside')} />
       <div data-taskbar>
         <Taskbar open={state.open} minimized={state.minimized} onSelect={selectTask} />
       </div>

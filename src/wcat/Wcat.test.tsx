@@ -26,6 +26,50 @@ function move(x = 340, y = 400, pointerType = 'mouse') {
 }
 
 describe('wcat interaction', () => {
+  it('sleeps instead of starting an overdue icon visit after a stalled frame', () => {
+    render(<div data-desktop><button data-icon="art">Art</button><div data-window="art" hidden><div data-wcat-room="art" /></div><Wcat label="wcat" /></div>)
+    vi.spyOn(performance, 'now').mockReturnValue(46000)
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().dataset.mode).toBe('nap')
+  })
+
+  it('visits an icon, lives in its opened window, and returns to the badge on close', () => {
+    const view = render(<div data-desktop><button data-icon="art">Art</button><div data-window="art" hidden><div data-wcat-room="art" /></div><Wcat label="wcat" /></div>)
+    for (let i = 0; i < 45 && !view.container.querySelector('[data-cat-resident]'); i++) act(() => vi.advanceTimersByTime(1000))
+    expect(view.container.querySelector('[data-icon="art"] [data-cat-resident="art"]')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'wcat' })).toBeNull()
+    const win = view.container.querySelector<HTMLElement>('[data-window]')!
+    win.hidden = false
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().closest('[data-wcat-room]')).toBeTruthy()
+    expect(view.container.querySelectorAll('[data-wcat]')).toHaveLength(1)
+    win.hidden = true
+    act(() => vi.advanceTimersByTime(32))
+    expect(screen.queryByRole('button', { name: 'wcat' })).toBeNull()
+    expect(view.container.querySelector('[data-cat-resident]')).toBeTruthy()
+    win.hidden = false
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().closest('[data-wcat-room]')).toBeTruthy()
+    view.unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('lets a visitor bring the cat back by dragging outside its room', () => {
+    const view = render(<div data-desktop><button data-icon="art">Art</button><div data-window="art" hidden><div data-wcat-room="art" /></div><Wcat label="wcat" /></div>)
+    for (let i = 0; i < 45 && !view.container.querySelector('[data-cat-resident]'); i++) act(() => vi.advanceTimersByTime(1000))
+    view.container.querySelector<HTMLElement>('[data-window]')!.hidden = false
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().closest('[data-wcat-room]')).toBeTruthy()
+    press()
+    move(840, 300)
+    act(() => vi.advanceTimersByTime(120))
+    fireEvent.pointerUp(cat(), { pointerId: 1, clientX: 840, clientY: 300 })
+    act(() => vi.advanceTimersByTime(32))
+    expect(cat().closest('[data-wcat-room]')).toBeNull()
+    expect(view.container.querySelector('[data-cat-resident]')).toBeNull()
+    expect(view.container.querySelectorAll('[data-wcat]')).toHaveLength(1)
+  })
+
   it('keeps sleeping eyes still when a distant pointer moves', () => {
     render(<Wcat label="wcat" />)
     act(() => vi.advanceTimersByTime(46000))
@@ -77,7 +121,7 @@ describe('wcat interaction', () => {
 
   it('pets from slow head strokes, then rests with neutral eyes', () => {
     render(<Wcat label="wcat" />)
-    for (const x of [266, 276, 286, 296]) {
+    for (const x of [266, 276, 286, 296, 286, 276, 266, 276, 286, 296]) {
       fireEvent.pointerMove(cat(), { pointerType: 'mouse', clientX: x, clientY: 570, buttons: 0 })
       act(() => vi.advanceTimersByTime(100))
     }
@@ -86,6 +130,63 @@ describe('wcat interaction', () => {
     expect(cat().style.getPropertyValue('--wcat-eye-y')).toBe('0px')
     act(() => vi.advanceTimersByTime(1600))
     expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('does not mistake a single slow pass across the head for petting', () => {
+    render(<Wcat label="wcat" />)
+    for (const x of [266, 276, 286, 296]) {
+      fireEvent.pointerMove(cat(), { pointerType: 'mouse', clientX: x, clientY: 570, buttons: 0 })
+      act(() => vi.advanceTimersByTime(150))
+    }
+    expect(cat().dataset.mode).not.toBe('pet')
+  })
+
+  it('gently sets a held cat on a window and allows another lift', () => {
+    const view = render(<div><div data-window="window"><div data-drag-handle /></div><Wcat label="wcat" /></div>)
+    const handle = view.container.querySelector<HTMLElement>('[data-drag-handle]')!
+    vi.spyOn(handle, 'getBoundingClientRect').mockReturnValue(new DOMRect(300, 350, 400, 33))
+    press()
+    move(400, 330)
+    act(() => vi.advanceTimersByTime(160))
+    expect(view.container.querySelector<HTMLElement>('.wcat-landing')?.style.visibility).toBe('visible')
+    fireEvent.pointerUp(cat(), { pointerId: 1, clientX: 400, clientY: 330 })
+    act(() => vi.advanceTimersByTime(1000))
+    expect(cat().dataset.form).toBe('cat')
+    expect(cat().dataset.ground).toBe('window')
+    expect(cat().style.transform).toContain('306px')
+    fireEvent.pointerDown(cat(), { pointerId: 2, pointerType: 'mouse', button: 0, isPrimary: true, clientX: 400, clientY: 328 })
+    fireEvent.pointerMove(cat(), { pointerId: 2, pointerType: 'mouse', clientX: 450, clientY: 250 })
+    expect(cat().dataset.form).toBe('ball')
+  })
+
+  it('gets briefly dizzy after a hard bouncing throw, then recovers', () => {
+    render(<Wcat label="wcat" />)
+    press()
+    act(() => vi.advanceTimersByTime(16))
+    move(600, 450)
+    fireEvent.pointerUp(cat(), { pointerId: 1, clientX: 600, clientY: 450 })
+    for (let i = 0; i < 160 && cat().dataset.form === 'ball'; i++) act(() => vi.advanceTimersByTime(100))
+    expect(cat().dataset.form).toBe('cat')
+    expect(cat().dataset.mode).toBe('dizzy')
+    expect(cat().querySelectorAll('.wcat-eye-spiral')).toHaveLength(2)
+    act(() => vi.advanceTimersByTime(3500))
+    expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('bends the vector tail over time and holds it still with reduced motion', () => {
+    const view = render(<Wcat label="wcat" />)
+    const tail = cat().querySelector('.wcat-tail path')
+    const first = tail?.getAttribute('d')
+    act(() => vi.advanceTimersByTime(600))
+    expect(tail?.getAttribute('d')).not.toBe(first)
+    view.unmount()
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    render(<Wcat label="wcat" />)
+    const stillTail = cat().querySelector('.wcat-tail path')
+    const still = stillTail?.getAttribute('d')
+    expect(still).toBeTruthy()
+    act(() => vi.advanceTimersByTime(1000))
+    expect(stillTail?.getAttribute('d')).toBe(still)
   })
 
   it('does not turn a canceled touch swipe into a poke', () => {
@@ -232,9 +333,9 @@ describe('wcat interaction', () => {
     vi.spyOn(handle, 'getBoundingClientRect').mockReturnValue(new DOMRect(300, 450, 500, 33))
     press()
     act(() => vi.advanceTimersByTime(16))
-    move(500, 430)
+    move(500, 340)
     act(() => vi.advanceTimersByTime(100))
-    fireEvent.pointerUp(cat(), { pointerId: 1, clientX: 500, clientY: 430 })
+    fireEvent.pointerUp(cat(), { pointerId: 1, clientX: 500, clientY: 340 })
     act(() => vi.advanceTimersByTime(4000))
     expect(cat().dataset.form).toBe('cat')
     expect(cat().dataset.ground).toBe('floor')

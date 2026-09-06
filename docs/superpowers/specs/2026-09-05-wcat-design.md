@@ -6,9 +6,11 @@ The missing body reference remains an art-review limitation. The first
 reviewable version uses the rounded silhouette described below.
 
 The owner's preview feedback added petting, poking, toy-like hunting,
-half-open waking eyes and floating sleep marks.
+half-open waking eyes and floating sleep marks. Later feedback added gentle
+window placement, live attention bouts, a flexible tail, harder-to-trigger
+petting, rare dizziness, edge inspection and private app visits.
 The behavior below includes that refinement. Its tests and review record are
-in `../plans/2026-09-05-wcat-behavior.md`.
+in `../plans/2026-09-05-wcat-behavior.md` and `../plans/2026-09-05-wcat-handling.md`.
 
 ## What the owner asked for
 
@@ -55,7 +57,11 @@ src/wcat/
                  Takes an injected clock and random so tests are deterministic.
   senses.ts      pure: recognizes gentle head strokes and nearby reversals.
   world.ts       reads visible title bars and layer bounds before frame writes.
-  Wcat.tsx       the component: rAF loop, pointer handling, writes transform to
+  exploration.ts pure: visit eligibility, inspection and entry decisions.
+                 Also reads exposed icons and available room hosts.
+  tail.ts        SVG curve poses and frame-rate-independent smoothing.
+  Wcat.tsx       one-cat residence coordinator, private visited-app set and portals.
+  Cat.tsx        the component: rAF loop, pointer handling, writes transform to
                  the element through a ref. React state only for form and mood.
 src/index.css    cat and ball shapes, blink keyframes, morph transition.
 ```
@@ -69,10 +75,11 @@ the cat element itself has `pointer-events: auto`. On phones the layer is
 ## Look
 
 A 44 px black cat built from CSS shapes in one element: rounded body, two
-triangle ears, a curved tail. Face per the reference above, scaled to the
-body. Eyes blink every 3 to 6 s (scaleY to 0.1 for 120 ms). Occasional glances
-shift at most 2 px toward a remembered pointer position for about a second,
-with 4 to 9 seconds between opportunities. Sleeping and petting eyes stay
+triangle ears, a flexible SVG tail with separate middle and tip movement.
+Face per the reference above, scaled to the body. Eyes blink every 3 to 6 s
+(scaleY to 0.1 for 120 ms). Attention bouts track the live pointer for 2 to
+3.5 seconds, with 8 to 14 seconds between opportunities. They can include
+a little walking on the same surface. Sleeping and petting eyes stay
 closed and centered. Facing flips with `scaleX(-1)` on the body only, never
 the face container, so the mouth stays symmetric.
 
@@ -113,11 +120,16 @@ over the head pet. Dragging still uses the same thresholds.
 | stalk | two nearby pointer reversals within 1.2 s, outside the head | creep at 36 px/s for 450 ms, watch the toy | crouch; pointer out of reach → sit |
 | crouch | after stalking | flatten, wiggle and hold the last toy position for 550 ms | pounce; pointer out of reach → sit |
 | pounce | after crouching | short arc toward the last target on the same ledge or floor | landing → sit; 8 to 13 s cooldown from hunt start |
-| pet | gentle unpressed head stroke, at least 24 px over 120 ms | stop, lean, close and center eyes | 1.4 s without strokes → sit |
+| follow | a short attention bout, reachable moving pointer | follow at up to 90 px/s, track live pointer | pointer settles, comes close or leaves reach; bout expires |
+| pet | slow unpressed head strokes, two horizontal reversals, at least 70 px over 650 ms | stop, lean, close eyes into happy arches | 1.4 s without strokes → sit |
 | poke | click, tap or Enter | stop, brief startle and ear flick | 650 ms → sit |
 | nap | 45 s without pointer movement or affection | eyes closed and still, body 10% flatter, rising zZZ | fresh movement within 110 px or poke/pet → wake; lift → ball |
 | wake | waking from a nap | eyes half-open and still, body 5% flatter, sleep marks hidden | 650 ms → sit or the requested poke/pet reaction |
 | fall | the surface under the feet is gone (window closed, minimized or moved) | gravity, land on the first platform below or the floor, squash 120 ms | landing → sit |
+| peek | 40% chance on each window-edge approach | stop, lean and look down for 650 to 1150 ms | continue without rerolling at the same edge |
+| dizzy | hard spinning throw meets the thresholds below | wobble, spiral eyes, loose tail | 3 s → sit; reduced motion skips it |
+| inspect | eligible exposed desktop icon after an idle delay | look toward the icon and tilt the head for 1.1 s | 60% → enter; otherwise resume resting |
+| enter | after choosing an icon | tuck the tail and shrink along an 800 ms arc | icon badge; opening the app → room cat |
 
 Implementation correction: floor jumps may reach the lowest nearby window
 top regardless of its height. Normal windows are taller than 180 px, and
@@ -132,11 +144,19 @@ is capped by the ceiling. An isolated cat walks off an edge before falling.
   `src/play/drag.ts`. Form becomes ball, position follows the pointer.
 - Throw: on release, velocity is the mean over the last 80 ms of samples,
   capped at 1800 px/s.
+- Gentle placement: release at no more than 180 px/s with the feet within
+  64 px above or 36 px below a window top. The whole body must fit across
+  that top. Choose the nearest eligible top, show a landing line while held,
+  then sit for at least five seconds. Canceled drags do not snap.
 - Flight: gravity, bounce off the four bounds with restitution 0.72, roll on
   the floor with friction (velocity x times 0.985 per frame at 60 Hz, scaled
   by dt). The ball ignores windows.
 - Rest: speed under 40 px/s while on the floor for 300 ms → unroll into cat
   form → sit.
+- Dizziness requires a launch of at least 1300 px/s, three full rotations
+  while moving horizontally at least 600 px/s, and one impact of at least
+  450 px/s. Every lift/release resets these counters. A gentle or vertical
+  toss does not qualify just because it bounces.
 - `prefers-reduced-motion`: no roam or hunting. Sleep marks and pet/poke
   feedback are still, without animation. Drag still works. Release
   drops straight down with no bounce and lands as a cat.
@@ -149,6 +169,20 @@ so a normal swipe still scrolls. The ball bounces off the viewport edges like
 on desktop. Touch movement does not trigger mouse-style petting or hunting.
 
 ## Not stored, not shared
+
+Desktop app visits wait 22 to 40 seconds between opportunities. Only
+exposed, closed desktop icons qualify. A new app can invite a visit even
+on a busy desktop; a previously visited app requires fewer than two open
+windows. The visited set lasts for this page session only. Interactions,
+sleep, mobile and reduced motion take priority over exploration.
+
+An entered icon has a small cat-face badge. Opening its app mounts the
+same visitor's cat in a clipped overlay inside the content area, below
+the title bar. That overlay follows the window and does not scroll with
+its content. Closing/minimizing restores the badge; reopening/restoring
+brings the cat back. Drag outside the window and release to return it to
+the desktop. The room's play area avoids an overlapping sticker dock.
+Only one cat or dormant badge watcher runs at a time.
 
 Every load starts the cat on the floor at 35% of the width, facing right.
 Nothing goes to playhtml or localStorage. If the owner later wants a shared
@@ -171,6 +205,9 @@ PointerEvent and pointer capture.
   down; affection wakes; mobile/reduced-motion restrictions hold.
 - `senses.test.ts`: head strokes versus hover/fast passes; nearby reversals
   versus navigation, distant motion and stale history; bounded sample count.
+- `tail.test.ts`: curve continuity, pose differences, easing and still
+  reduced-motion poses. `exploration.test.ts`: delays, enter/decline,
+  open-window and visited-app eligibility, cancellation.
 - `Wcat.test.tsx`: renders with `data-form="cat"`; pointerdown plus 40 px
   move → `data-form="ball"`; pointerup then advancing fake timers past rest
   → `data-form="cat"`; on the mobile branch no platforms are queried; sleeping
@@ -181,6 +218,9 @@ PointerEvent and pointer capture.
 - `scripts/gate/verify-wcat-behavior.mjs`: real mouse, keyboard and touch
   input with a controlled clock. Checks visible sleep, affection and hunting
   poses without changing private cat state.
+- `scripts/gate/verify-wcat-handling.mjs`: placement, live gaze, cooldown,
+  tail movement, edge decisions, dizziness, icon badge, app open/close/
+  minimize/restore, visible room hit target and dragging back outside.
 
 ## Budget
 

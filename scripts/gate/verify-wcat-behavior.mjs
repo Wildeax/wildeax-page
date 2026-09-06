@@ -22,6 +22,7 @@ async function eyes(page) {
   return cat(page).evaluate((el) => ({
     x: el.style.getPropertyValue('--wcat-eye-x'), y: el.style.getPropertyValue('--wcat-eye-y'),
     height: el.querySelector('.wcat-eyes > span').getBoundingClientRect().height,
+    border: getComputedStyle(el.querySelector('.wcat-eyes > span')).borderTopWidth,
   }))
 }
 function check(label, passed, detail) {
@@ -38,7 +39,7 @@ async function shot(page, name) {
 }
 async function stroke(page) {
   const r = await cat(page).boundingBox()
-  for (const offset of [8, 18, 28, 38, 28, 18]) {
+  for (const offset of [8, 18, 28, 38, 28, 18, 8, 18, 28, 38]) {
     await page.mouse.move(r.x + offset, r.y + 14)
     await page.clock.runFor(120)
   }
@@ -83,7 +84,7 @@ try {
   await stroke(page)
   const petEyes = await eyes(page)
   check('gentle head strokes relax the cat and close its eyes', await mode(page) === 'pet'
-    && petEyes.x === '0px' && petEyes.y === '0px' && petEyes.height < 2, { mode: await mode(page), ...petEyes })
+    && petEyes.x === '0px' && petEyes.y === '0px' && petEyes.height < 6 && petEyes.border === '2px', { mode: await mode(page), ...petEyes })
   await shot(page, 'pet')
   await page.clock.runFor(1600)
   check('petting ends when strokes stop', await mode(page) === 'sit')
@@ -95,7 +96,7 @@ try {
     await play.mouse.move(r.x + 22 + offset, r.y + 30)
     await play.clock.runFor(100)
   }
-  check('ordinary pointer travel does not start a hunt', await mode(play) === 'sit')
+  check('ordinary pointer travel does not start a hunt', !['stalk', 'crouch', 'pounce'].includes(await mode(play)))
   await play.clock.runFor(400)
   await tease(play)
   check('nearby back-and-forth motion starts stalking', await mode(play) === 'stalk', await mode(play))

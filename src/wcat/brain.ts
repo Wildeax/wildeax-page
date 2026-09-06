@@ -2,7 +2,7 @@ import { CAT_SIZE, GRAVITY, clamp, support } from './physics'
 import type { Body, Platform, World } from './physics'
 import type { Signals } from './senses'
 
-export type Mode = 'sit' | 'walk' | 'jump' | 'nap' | 'wake' | 'fall' | 'ball' | 'stalk' | 'crouch' | 'pounce' | 'pet' | 'poke'
+export type Mode = 'sit' | 'walk' | 'follow' | 'jump' | 'nap' | 'wake' | 'fall' | 'ball' | 'stalk' | 'crouch' | 'pounce' | 'pet' | 'poke' | 'peek' | 'dizzy' | 'inspect' | 'enter'
 export interface Brain {
   mode: Mode
   until: number
@@ -14,19 +14,21 @@ export interface Brain {
   lookUntil: number
   target: { x: number; y: number }
   wakeTo: 'sit' | 'pet' | 'poke'
+  attentionUntil: number
+  edgeChecked: string | null
 }
-export interface Pointer { x: number; y: number; movedAt: number; inside: boolean }
+export interface Pointer { x: number; y: number; movedAt: number; inside: boolean; pressed?: boolean }
 export interface Input { now: number; world: World; pointer: Pointer; mobile: boolean; random: () => number; signals?: Signals }
 
 export function createBrain(now: number, random: () => number): Brain {
   return { mode: 'sit', until: now + 2 + random() * 6, facing: 1, awakeAt: now,
-    reactedAt: now - 0.001, huntAfter: now, lookAfter: now, lookUntil: 0, target: { x: 0, y: 0 }, wakeTo: 'sit' }
+    reactedAt: now - 0.001, huntAfter: now, lookAfter: now, lookUntil: 0, target: { x: 0, y: 0 }, wakeTo: 'sit', attentionUntil: 0, edgeChecked: null }
 }
 
-// Ordinary glances look at a remembered spot, not a live cursor. Sleeping,
-// petting and rolling always use a neutral face, including between RAF ticks.
+// The brain limits live tracking to short attention bouts. Sleeping, petting,
+// dizziness and rolling use a neutral gaze, including between RAF ticks.
 export function gaze(brain: Brain, body: Body, now: number, reduced = false): { x: number; y: number } {
-  if (reduced || body.form === 'ball' || ['nap', 'wake', 'pet', 'poke'].includes(brain.mode) || now >= brain.lookUntil) return { x: 0, y: 0 }
+  if (reduced || body.form === 'ball' || ['nap', 'wake', 'pet', 'poke', 'dizzy'].includes(brain.mode) || now >= brain.lookUntil) return { x: 0, y: 0 }
   return { x: clamp((brain.target.x - body.x) / 70, -2, 2), y: clamp((brain.target.y - (body.y - 28)) / 70, -2, 2) }
 }
 
@@ -45,6 +47,7 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     brain.until = now + 0.65
     brain.awakeAt = now
     brain.lookUntil = 0
+    brain.attentionUntil = 0
     body.vx = 0
   }
   const done = () => ({ brain, body })
@@ -71,6 +74,8 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     }
     brain.lookUntil = 0
     brain.huntAfter = now + 5
+    brain.attentionUntil = 0
+    brain.lookAfter = now + 5
     body.vx = 0
   }
   if (brain.mode === 'wake') {
@@ -84,8 +89,8 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     body.vx = 0
     return done()
   }
-  if (brain.mode === 'pet' || brain.mode === 'poke') {
-    if (now >= brain.until) sit()
+  if (brain.mode === 'pet' || brain.mode === 'poke' || brain.mode === 'dizzy') {
+    if (now >= brain.until || (brain.mode === 'dizzy' && world.reducedMotion)) sit()
     body.vx = 0
     return done()
   }
@@ -107,6 +112,12 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
   // too. Their restrictions apply to roaming, gaze and hunting below.
   if (mobile || world.reducedMotion) { if (brain.mode !== 'sit') sit(); body.vx = 0; brain.lookUntil = 0; return done() }
 
+  if (brain.mode === 'peek') {
+    if (now < brain.until) { body.vx = 0; return done() }
+    brain.mode = 'walk'
+    brain.until = now + 1
+  }
+
   const toyReachable = pointer.inside && distance <= 240 && Math.abs(pointer.y - body.y) <= 100
     && pointer.x >= surface.left + CAT_SIZE / 2 && pointer.x <= surface.right - CAT_SIZE / 2
   const teasedAt = signals.teasedAt ?? -Infinity
@@ -116,6 +127,7 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     brain.until = now + 0.45
     brain.reactedAt = teasedAt
     brain.huntAfter = now + 8 + random() * 5
+    brain.attentionUntil = 0
   }
   if (brain.mode === 'stalk' || brain.mode === 'crouch') {
     if (!toyReachable) { brain.lookUntil = 0; sit(); return done() }
@@ -134,12 +146,24 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     return done()
   }
 
-  if (now >= brain.lookAfter && pointer.inside && distance < 260 && now - pointer.movedAt < 0.2) {
-    brain.lookAfter = now + 4 + random() * 5
-    if (random() < 0.7) {
-      brain.target = { x: pointer.x, y: pointer.y }
-      brain.lookUntil = now + 0.65 + random() * 0.7
+  if (now >= brain.lookAfter && !pointer.pressed && pointer.inside && distance < 320 && now - pointer.movedAt < 0.2) {
+    brain.attentionUntil = now + 2 + random() * 1.5
+    brain.lookAfter = brain.attentionUntil + 8 + random() * 6
+  }
+  if (now < brain.attentionUntil && !pointer.pressed && pointer.inside && distance < 360 && now - pointer.movedAt < 1.2) {
+    brain.target = { x: pointer.x, y: pointer.y }
+    brain.lookUntil = brain.attentionUntil
+    if (toyReachable && Math.abs(pointer.x - body.x) > 55) {
+      brain.mode = 'follow'
+      brain.facing = pointer.x < body.x ? -1 : 1
+      body.vx = brain.facing * Math.min(90, Math.abs(pointer.x - body.x) - 40)
+      return done()
     }
+    if (brain.mode === 'follow') { sit(); return done() }
+  } else if (brain.attentionUntil > 0) {
+    brain.attentionUntil = 0
+    brain.lookUntil = 0
+    if (brain.mode === 'follow') { sit(); return done() }
   }
   if (brain.mode === 'sit' && now >= brain.until) {
     brain.mode = 'walk'
@@ -150,6 +174,21 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
   body.vx = brain.facing * 70
 
   const atEdge = brain.facing === 1 ? body.x >= surface.right - CAT_SIZE / 2 - 4 : body.x <= surface.left + CAT_SIZE / 2 + 4
+  const edge = `${surface.id}:${brain.facing}`
+  if (!atEdge) brain.edgeChecked = null
+  if (atEdge && surface.id !== 'floor' && brain.edgeChecked !== edge) {
+    brain.edgeChecked = edge
+    if (random() < 0.4) {
+      brain.mode = 'peek'
+      brain.until = now + 0.65 + random() * 0.5
+      brain.target = { x: body.x + brain.facing * 45, y: body.y + 100 }
+      brain.lookUntil = brain.until
+      brain.attentionUntil = 0
+      brain.lookAfter = Math.max(brain.lookAfter, brain.until + 2)
+      body.vx = 0
+      return done()
+    }
+  }
   const targets = world.platforms.flatMap((p) => {
     if (p.id === surface.id || (surface.id !== 'floor' && Math.abs(body.y - p.y) > 180) || p.right - p.left < CAT_SIZE) return []
     const x = clamp(body.x + brain.facing * 100, p.left + CAT_SIZE / 2, p.right - CAT_SIZE / 2)

@@ -23,7 +23,7 @@ export function DesktopIcon({ id, label, glyph, iconSrc, selected = false, pop =
       data-drag-ok
       data-selected={selected || undefined}
       onClick={onOpen}
-      className={`group flex w-20 flex-col items-center gap-1 rounded p-2 text-center transition hover:bg-brand-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
+      className={`group relative flex w-20 flex-col items-center gap-1 rounded p-2 text-center transition hover:bg-brand-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${
         selected ? 'bg-brand-400/20 ring-1 ring-brand-400/60' : ''
       }`}
     >

@@ -46,15 +46,17 @@ describe('wcat brain', () => {
     expect(gaze(result.brain, result.body, 2.1)).toEqual({ x: 0, y: 0 })
   })
 
-  it('glances briefly at a nearby movement, then looks away even if movement continues', () => {
+  it('tracks the live pointer during a brief attention bout, then takes a long break', () => {
     const body = createBody(world)
     const pointer = { x: 400, y: 550, movedAt: 1, inside: true }
     const first = think(createBrain(0, random), body, input(1, { pointer }))
     expect(gaze(first.brain, body, 1).x).toBeGreaterThan(0)
     const moved = think(first.brain, body, input(1.1, { pointer: { ...pointer, x: 180, movedAt: 1.1 } }))
-    expect(gaze(moved.brain, body, 1.1)).toEqual(gaze(first.brain, body, 1))
-    const ignored = think(moved.brain, body, input(3, { pointer: { ...pointer, movedAt: 3 } }))
-    expect(gaze(ignored.brain, body, 3)).toEqual({ x: 0, y: 0 })
+    expect(gaze(moved.brain, body, 1.1).x).toBeLessThan(0)
+    const ignored = think(moved.brain, body, input(5, { pointer: { ...pointer, movedAt: 5 } }))
+    expect(gaze(ignored.brain, body, 5)).toEqual({ x: 0, y: 0 })
+    expect(ignored.body.vx).toBe(0)
+    expect(ignored.brain.lookAfter).toBeGreaterThan(10)
   })
 
   it('does not flicker between sleeping and awake under a nearby parked pointer', () => {
@@ -176,5 +178,22 @@ describe('wcat brain', () => {
     expect(more.brain.mode).toBe('wake')
     expect(more.brain.until).toBe(waking.brain.until)
     expect(think(more.brain, more.body, input(47.7, { signals: { pettedAt: 47.7 } })).brain.mode).toBe('pet')
+  })
+
+  it('sometimes checks below a ledge once before stepping off', () => {
+    const bounds = { ...world, platforms: [{ id: 'window', left: 100, right: 300, y: 250 }] }
+    const brain = { ...createBrain(0, random), mode: 'walk' as const, until: 10 }
+    const body = { ...createBody(bounds), x: 280, y: 250, ground: 'window' }
+    const peek = think(brain, body, input(1, { world: bounds, random: () => 0.2 }))
+    expect(peek.brain.mode).toBe('peek')
+    expect(peek.body.vx).toBe(0)
+    expect(gaze(peek.brain, peek.body, 1).y).toBeGreaterThan(0)
+    const decisions: number[] = []
+    const next = think(peek.brain, peek.body, input(3, { world: bounds, random: () => { decisions.push(1); return 0.2 } }))
+    expect(next.brain.mode).toBe('walk')
+    expect(next.body.vx).toBe(70)
+    expect(decisions).toHaveLength(0)
+    const ordinary = think(brain, body, input(1, { world: bounds, random: () => 0.4 }))
+    expect(ordinary.brain.mode).toBe('walk')
   })
 })

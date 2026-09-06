@@ -25,15 +25,16 @@ describe('wcat senses', () => {
     }
   })
 
-  it('recognizes a gentle stroke across the head, without treating it as prey', () => {
+  it('recognizes sustained back-and-forth head strokes without treating them as prey', () => {
     let motion = createMotion()
-    for (const [i, x] of [266, 276, 286, 296, 286, 276].entries()) motion = observe(motion, sample(x, 570, i * 0.1), body)
-    expect(motion.pettedAt).toBe(0.5)
+    for (const [i, x] of [266, 276, 286, 296, 286, 276, 266, 276, 286, 296].entries()) motion = observe(motion, sample(x, 570, i * 0.1), body)
+    expect(motion.pettedAt).toBeCloseTo(0.9)
     expect(motion.teasedAt).toBe(-Infinity)
   })
 
-  it('does not pet on a stationary hover, a fast pass, or a stroke below the head', () => {
+  it('does not pet on a single slow pass, stationary hover, fast pass, or stroke below the head', () => {
     for (const points of [
+      [266, 276, 286, 296].map((x, i) => sample(x, 570, i * 0.15)),
       [270, 270, 270, 270].map((x, i) => sample(x, 570, i * 0.1)),
       [266, 276, 286, 296].map((x, i) => sample(x, 570, i * 0.005)),
       [266, 276, 286, 296].map((x, i) => sample(x, 596, i * 0.1)),
@@ -41,6 +42,16 @@ describe('wcat senses', () => {
       const motion = points.reduce((state, point) => observe(state, point, body), createMotion())
       expect(motion.pettedAt).toBe(-Infinity)
     }
+  })
+
+  it('recognizes deliberate strokes from a high-polling-rate mouse', () => {
+    let motion = createMotion()
+    for (let i = 0; i <= 900; i++) {
+      const phase = i / 300
+      const x = phase < 1 ? 266 + phase * 30 : phase < 2 ? 296 - (phase - 1) * 30 : 266 + (phase - 2) * 30
+      motion = observe(motion, sample(x, 570, i / 1000), body)
+    }
+    expect(motion.pettedAt).toBeGreaterThan(0.7)
   })
 
   it('bounds its history even with high-frequency pointer events', () => {

@@ -4,6 +4,22 @@ import { readWorld } from './world'
 
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks() })
 
+it('keeps a room cat above an overlapping sticker dock', () => {
+  const root = document.createElement('div')
+  root.dataset.desktop = ''
+  const layer = document.createElement('div')
+  const dock = document.createElement('div')
+  dock.dataset.stickerDock = ''
+  root.append(layer)
+  document.body.append(root, dock)
+  vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue(new DOMRect(460, 370, 380, 250))
+  vi.spyOn(dock, 'getBoundingClientRect').mockReturnValue(new DOMRect(410, 553, 540, 62))
+  expect(readWorld(layer, true, false, true).floor).toBe(179)
+  expect(readWorld(layer, true, false).floor).toBe(242)
+  vi.mocked(dock.getBoundingClientRect).mockReturnValue(new DOMRect(10, 553, 300, 62))
+  expect(readWorld(layer, true, false, true).floor).toBe(242)
+})
+
 it('reads visible title bars in layer coordinates and excludes hidden or exiting windows', () => {
   const root = document.createElement('div')
   const layer = document.createElement('div')

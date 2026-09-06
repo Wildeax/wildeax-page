@@ -8,7 +8,8 @@ type Resources = Record<Lang, Dict>
 
 export const resources: Resources = {
   en: {
-    'os.wcat.help': 'wcat. Click to poke. Stroke the head gently to pet. Wiggle nearby to play. Drag to throw, or hold on touch. Keyboard: Enter to poke, Space to lift or drop, arrows to move, Escape to drop.',
+    'os.wcat.help': 'wcat. Click to poke. Stroke back and forth over the head to pet. Wiggle nearby to play. Drag to throw, or pause above a window edge to set down. Hold on touch. To leave an app, drag outside its window and release. Keyboard: Enter to poke, Space to lift or drop, arrows to move, Escape to drop.',
+    'os.wcat.inside': 'wcat is inside this app',
     'os.menu.refresh': 'Refresh',
     'os.menu.close': 'Close menu',
     'os.win.questionary': 'questionary.exe',
@@ -86,7 +87,8 @@ export const resources: Resources = {
     'notfound.back': 'Go back home',
   },
   es: {
-    'os.wcat.help': 'wcat. Toca para darle un toquecito. Pasa el cursor suavemente por su cabeza para acariciarlo. Muévelo de un lado a otro cerca para jugar. Arrastra para lanzar, o mantén pulsado en pantalla táctil. Teclado: Enter para tocar, espacio para levantar o soltar, flechas para mover, Escape para soltar.',
+    'os.wcat.help': 'wcat. Toca para darle un toquecito. Acaricia la cabeza de un lado a otro. Mueve el cursor cerca para jugar. Arrastra para lanzar, o espera sobre el borde de una ventana para dejarlo sentado. Mantén pulsado en pantalla táctil. Para salir de una app, arrástralo fuera de su ventana y suelta. Teclado: Enter para tocar, espacio para levantar o soltar, flechas para mover, Escape para soltar.',
+    'os.wcat.inside': 'wcat está dentro de esta app',
     'os.menu.refresh': 'Actualizar',
     'os.menu.close': 'Cerrar menú',
     'os.win.questionary': 'questionary.exe',

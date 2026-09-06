@@ -16,6 +16,9 @@ function onHead(point: Sample, body: Body): boolean {
 // bounded history so ordinary navigation never leaves a queued-up pounce.
 export function observe(previous: Motion, point: Sample, body: Body): Motion {
   const last = previous.points.at(-1)
+  // Keep time coverage on high-polling-rate mice instead of letting their
+  // newest 80 events erase the beginning of an intentional stroke.
+  if (last && point.at - last.at < 1 / 60 && Math.hypot(point.x - last.x, point.y - last.y) < 12) return previous
   const continuous = last && point.at - last.at <= 0.3
   const points = [...(continuous ? previous.points.filter((p) => point.at - p.at <= 1.2) : []), point].slice(-80)
   const motion = { ...previous, points }
@@ -23,19 +26,29 @@ export function observe(previous: Motion, point: Sample, body: Body): Motion {
 
   const head: Sample[] = []
   for (let i = points.length - 1; i >= 0; i--) {
-    if (!onHead(points[i], body) || point.at - points[i].at > 0.7) break
+    if (!onHead(points[i], body)) break
     head.unshift(points[i])
   }
   if (head.length > 1) {
     let travel = 0
     let gentle = true
+    let anchorX = head[0].x
+    let direction = 0
+    let turns = 0
     for (let i = 1; i < head.length; i++) {
       const dx = Math.abs(head[i].x - head[i - 1].x)
       const dt = head[i].at - head[i - 1].at
       travel += dx
-      if (dt <= 0 || Math.hypot(dx, head[i].y - head[i - 1].y) / dt > 450) gentle = false
+      if (dt <= 0 || Math.hypot(dx, head[i].y - head[i - 1].y) / dt > 260) gentle = false
+      const leg = head[i].x - anchorX
+      if (Math.abs(leg) >= 6) {
+        const next = Math.sign(leg)
+        if (direction && next !== direction) turns++
+        direction = next
+        anchorX = head[i].x
+      }
     }
-    if (gentle && travel >= 24 && point.at - head[0].at >= 0.12) motion.pettedAt = point.at
+    if (gentle && turns >= 2 && travel >= 70 && point.at - head[0].at >= 0.65) motion.pettedAt = point.at
   }
 
   const nearToy = (p: Sample) => Math.hypot(p.x - body.x, p.y - body.y) <= 240
