@@ -157,15 +157,15 @@ verification and release records. PR: `https://github.com/Wildeax/wildeax-page/p
 
 ## Pending
 
-Mobile play is built on `feat/mobile-play` and uploaded for review, not
+Mobile play is committed at `02e6b7a` on `feat/mobile-play` and uploaded for review, not
 deployed. It replaces the Play popover with a four-tool row and swipeable
 sticker strip; adds opt-in, locally held tilt readings, calibration, Pet,
 card perches, mobile yarn chasing and page-scroll support. Desktop and
 mobile cats now leave their perch to pursue a lower toy, and lose interest
 early when yarn stays still. Sensor access is never requested on load.
 240 unit/component tests, build and changed-file lint pass. Full lint keeps
-its 19 existing errors and one warning. The 50 layout/isolation checks and
-25 new mobile-play browser checks pass on the hosted preview. Real iOS and
+its 19 existing errors and one warning. All 205 hosted browser checks pass,
+including 50 layout/isolation and 25 new mobile-play checks. Real iOS and
 Android sensor feel/permission UI remain untested. Have the owner try the
 preview on their phone before promoting it. Details and verification are in
 `docs/superpowers/plans/2026-09-06-mobile-play.md`.

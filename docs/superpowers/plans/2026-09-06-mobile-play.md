@@ -56,6 +56,10 @@ References: [device orientation permissions](https://developer.mozilla.org/en-US
   erasing, touch dragging, navigation and Spanish controls. An earlier local
   run timed out seeding the old-build sticker; the complete hosted run passed
   including the legacy failing control. No default room was mutated.
+- All **205 hosted browser checks pass**: 50 mobile/isolation, 25 new mobile
+  play, 33 main, 11 focused cat, 21 behavior, 26 handling/visits, 17
+  sticker/tail and 22 yarn/selection. The yarn gate now includes placing a
+  cat on a real desktop window and verifying descent toward floor yarn.
 - Visually inspected the mobile play screen and narrow/landscape sticker
   strips. Native iOS/Android sensors and Safari permission UI are untested.
 - Preview version: `a02a1761-913e-42c3-8316-04a18b8b6558`; bundle
@@ -63,3 +67,7 @@ References: [device orientation permissions](https://developer.mozilla.org/en-US
   `https://a02a1761-wildeax-page.arena-riot-proxy.workers.dev/?room=phone-review-a02a1761`.
   Upload only; production remains 100% `5ce57800-77ec-412e-8293-f2bc146672f4`,
   confirmed with `wrangler deployments list`. No routes, data or bindings changed.
+- Runtime changes are committed and pushed at `02e6b7a` on `feat/mobile-play`.
+  The external Workers Builds check also fails on this commit, as on prior
+  main: `https://github.com/Wildeax/wildeax-page/runs/101521368113`.
+  Local build/tests and manual hosted preview upload pass; do not call CI green.

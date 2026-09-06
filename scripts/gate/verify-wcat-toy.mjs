@@ -87,6 +87,21 @@ try {
   await other.close()
   await page.close()
 
+  const lowerToy = await open()
+  for (const id of ['work', 'me']) await lowerToy.locator(`[data-window="${id}"] button[aria-label^="Close"]`).click()
+  await lowerToy.clock.runFor(700)
+  const title = await lowerToy.locator('[data-window="readme"] [data-drag-handle]').boundingBox()
+  await toss(lowerToy, cat(lowerToy), 350, title.y - 22, 0, 0)
+  check('the lower-toy regression starts with a cat placed on a real window', await cat(lowerToy).getAttribute('data-ground') === 'readme')
+  await lowerToy.locator('[data-yarn-toggle]').click()
+  let descended = false
+  for (let i = 0; i < 35; i++) {
+    await lowerToy.clock.runFor(100)
+    if ((await cat(lowerToy).boundingBox()).y > title.y + 200) descended = true
+  }
+  check('a desktop cat leaves its window to reach a toy below', descended, await cat(lowerToy).boundingBox())
+  await lowerToy.close()
+
   const reduced = await open({ reducedMotion: 'reduce' })
   await reduced.locator('[data-yarn-toggle]').click()
   await toss(reduced, yarn(reduced), 800, 400)
