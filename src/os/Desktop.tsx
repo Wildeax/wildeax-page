@@ -1,5 +1,11 @@
-import { useReducer, useState } from 'react'
-import type { AnimationEvent, CSSProperties, ReactNode } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
+import type {
+  AnimationEvent,
+  CSSProperties,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from 'react'
 import { useI18n } from '@/i18n'
 import { Playable } from '@/play'
 import { DesktopIcon } from '@/os/DesktopIcon'
@@ -9,6 +15,8 @@ import { DESKTOP_ICON_IDS, WINDOWS } from '@/os/registry'
 import { PROJECTS } from '@/os/projects'
 import { initialOsState, isMinimized, isVisible, osReducer, zIndexOf } from '@/os/windowState'
 import { useIsDesktop } from '@/os/useIsDesktop'
+import { normalizeRect, selectIntersecting } from '@/os/marquee'
+import type { Point } from '@/os/marquee'
 import type { WindowDef, WindowId } from '@/os/types'
 import { ArtWindow } from '@/os/content/ArtWindow'
 import { ContactWindow } from '@/os/content/ContactWindow'
@@ -35,6 +43,16 @@ interface Flight {
 
 type Flights = Partial<Record<WindowId, Flight>>
 
+/** Rubber-band selection in progress, in desktop-root coordinates. */
+interface Marquee {
+  origin: Point
+  current: Point
+}
+
+/** left-3 + w-24 on the icon list, plus a gutter. */
+const ICON_COLUMN_WIDTH = 120
+const TASKBAR_HEIGHT = 44
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -58,10 +76,6 @@ function dockOffset(id: WindowId): { dx: number; dy: number } {
     dy: task.top + task.height / 2 - (win.top + win.height / 2),
   }
 }
-
-/** left-3 + w-24 on the icon list, plus a gutter. */
-const ICON_COLUMN_WIDTH = 120
-const TASKBAR_HEIGHT = 44
 
 /**
  * Authored positions are tuned for 1280x720 and up. On anything smaller, pull
@@ -104,6 +118,23 @@ export function Desktop() {
   const [state, dispatch] = useReducer(osReducer, WINDOWS, initialOsState)
   const [flights, setFlights] = useState<Flights>({})
   const reduced = prefersReducedMotion()
+
+  // Wallpaper interactions. All per visitor except the icon reset, which
+  // travels through Playable's shared transform like any other drag.
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [marquee, setMarquee] = useState<Marquee | null>(null)
+  const [selected, setSelected] = useState<ReadonlySet<WindowId>>(() => new Set())
+  const [menu, setMenu] = useState<Point | null>(null)
+  const [iconReset, setIconReset] = useState(0)
+
+  useEffect(() => {
+    if (!menu) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenu(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menu])
 
   function startFlight(id: WindowId, flight: Flight) {
     setFlights((current) => ({ ...current, [id]: flight }))
@@ -159,6 +190,58 @@ export function Desktop() {
     }
   }
 
+  /** Pointer position relative to the desktop root, which the marquee is drawn in. */
+  function rootPoint(e: { clientX: number; clientY: number }): Point {
+    const r = rootRef.current?.getBoundingClientRect()
+    return { x: e.clientX - (r?.left ?? 0), y: e.clientY - (r?.top ?? 0) }
+  }
+
+  function onRootPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    // Only a press on bare wallpaper. Windows, icons, stickers and the taskbar
+    // all stop this by being the target themselves.
+    if (e.target !== e.currentTarget || e.button !== 0) return
+    setMenu(null)
+    setSelected(new Set())
+    const p = rootPoint(e)
+    setMarquee({ origin: p, current: p })
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  function onRootPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!marquee || !rootRef.current) return
+    const current = rootPoint(e)
+    const band = normalizeRect(marquee.origin, current)
+    const root = rootRef.current.getBoundingClientRect()
+    const icons = [...rootRef.current.querySelectorAll<HTMLElement>('[data-icon]')].map((el) => {
+      const r = el.getBoundingClientRect()
+      return {
+        id: el.dataset.icon as WindowId,
+        rect: { x: r.left - root.left, y: r.top - root.top, width: r.width, height: r.height },
+      }
+    })
+    setSelected(new Set(selectIntersecting(band, icons)))
+    setMarquee({ origin: marquee.origin, current })
+  }
+
+  function onRootPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!marquee) return
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    setMarquee(null)
+  }
+
+  function onRootContextMenu(e: ReactMouseEvent<HTMLDivElement>) {
+    // Right-click on a window, link or icon keeps the browser's own menu.
+    if (e.target !== e.currentTarget) return
+    e.preventDefault()
+    setMenu(rootPoint(e))
+  }
+
+  function refreshIcons() {
+    setIconReset((n) => n + 1)
+    setSelected(new Set())
+    setMenu(null)
+  }
+
   // On mobile every window is already expanded, so WorkWindow's row buttons
   // dispatch an open for something already visible. Harmless, and cheaper than
   // a second code path; revisit only if it confuses anyone.
@@ -177,20 +260,33 @@ export function Desktop() {
     )
   }
 
+  const band = marquee ? normalizeRect(marquee.origin, marquee.current) : null
+
   return (
-    <div className="relative z-10 h-screen overflow-hidden">
+    <div
+      ref={rootRef}
+      data-desktop
+      className="relative z-10 h-screen overflow-hidden"
+      onPointerDown={onRootPointerDown}
+      onPointerMove={onRootPointerMove}
+      onPointerUp={onRootPointerUp}
+      onPointerCancel={onRootPointerUp}
+      onContextMenu={onRootContextMenu}
+    >
       <ul className="absolute left-3 top-3 z-[5] flex w-24 flex-col gap-1">
         {DESKTOP_ICON_IDS.map((id) => {
           const def = WINDOWS.find((w) => w.id === id)
           if (!def) return null
           return (
             <li key={id}>
-              <Playable id={`icon-${id}`} caps={['move']}>
+              <Playable id={`icon-${id}`} caps={['move']} resetSignal={iconReset}>
                 <DesktopIcon
                   id={id}
                   label={t(def.titleKey)}
                   glyph={def.glyph}
                   iconSrc={def.iconSrc}
+                  selected={selected.has(id)}
+                  pop={iconReset}
                   onOpen={() => openWindow(id)}
                 />
               </Playable>
@@ -198,6 +294,16 @@ export function Desktop() {
           )
         })}
       </ul>
+
+      {/* Above icons, below windows: it is drawn on empty wallpaper. */}
+      {band && (
+        <div
+          data-marquee
+          aria-hidden="true"
+          className="pointer-events-none absolute z-[8] border border-brand-400/70 bg-brand-400/10"
+          style={{ left: band.x, top: band.y, width: band.width, height: band.height }}
+        />
+      )}
 
       {WINDOWS.map((w) => {
         const shown = isVisible(state, w.id)
@@ -260,6 +366,39 @@ export function Desktop() {
           </div>
         )
       })}
+
+      {menu && (
+        <>
+          {/* Click anywhere else, or right-click again, closes the menu. Above
+              the taskbar so nothing can sit on top of an open menu. */}
+          <button
+            type="button"
+            aria-label={t('os.menu.close')}
+            className="fixed inset-0 z-[59] cursor-default"
+            onClick={() => setMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              setMenu(null)
+            }}
+          />
+          <div
+            role="menu"
+            data-context-menu
+            className="absolute z-[60] min-w-[168px] rounded-md border border-brand-400/30 bg-[#0b0e12]/95 p-1 shadow-[0_18px_48px_rgba(0,0,0,0.6)] backdrop-blur"
+            style={{ left: menu.x, top: menu.y }}
+          >
+            <button
+              role="menuitem"
+              type="button"
+              onClick={refreshIcons}
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left font-mono text-[12px] text-zinc-200 transition hover:bg-brand-400/15 hover:text-brand-100"
+            >
+              <span aria-hidden="true">↻</span>
+              {t('os.menu.refresh')}
+            </button>
+          </div>
+        </>
+      )}
 
       <div data-taskbar>
         <Taskbar open={state.open} minimized={state.minimized} onSelect={selectTask} />

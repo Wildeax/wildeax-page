@@ -4,7 +4,7 @@
  * playhtml, which is the one thing this seam exists to prevent. The cost is
  * losing Fast Refresh for this file during development, which is worth it.
  */
-import { Component } from 'react'
+import { Component, useEffect, useRef } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { PlayProvider, usePageData, usePlayContext, useUsers, withSharedState } from '@playhtml/react'
 import { PlayableSurface } from '@/play/PlayableSurface'
@@ -23,6 +23,39 @@ export interface PlayableProps {
   children: ReactNode
   /** Forwarded to PlayableSurface: restrict drag starts to this selector. */
   handle?: string
+  /**
+   * Bump to reset the shared transform to identity, for everyone. The
+   * desktop's Refresh uses it to put icons back where they were authored.
+   */
+  resetSignal?: number
+}
+
+interface PlayableBodyProps {
+  data: Transform
+  setData: (t: Transform) => void
+  caps: readonly Capability[]
+  handle?: string
+  resetSignal?: number
+  children: ReactNode
+}
+
+/**
+ * The rendered half of a shared Playable. A component rather than an inline
+ * render function so the reset effect is an ordinary hook.
+ */
+function PlayableBody({ data, setData, caps, handle, resetSignal, children }: PlayableBodyProps) {
+  const seen = useRef(resetSignal)
+  useEffect(() => {
+    if (resetSignal === undefined || resetSignal === seen.current) return
+    seen.current = resetSignal
+    setData(IDENTITY_TRANSFORM)
+  }, [resetSignal, setData])
+
+  return (
+    <PlayableSurface caps={caps} transform={data} onTransform={setData} handle={handle}>
+      {children}
+    </PlayableSurface>
+  )
 }
 
 /**
@@ -35,15 +68,21 @@ export interface PlayableProps {
 const SharedPlayable = withSharedState(
   (props: PlayableProps) => ({ defaultData: IDENTITY_TRANSFORM, id: props.id }),
   ({ data, setData }: { data: Transform; setData: (t: Transform) => void }, props: PlayableProps) => (
-    <PlayableSurface caps={props.caps} transform={data} onTransform={setData} handle={props.handle}>
-      {/* playhtml's HOC walks the React tree for the first DOM element and
-          clones its id and ref onto it. PlayableSurface is a component, so it
-          looks inside; if the child is also a component with no DOM child of
-          its own (DesktopIcon), it gives up and spreads those props onto the
-          component instead, clobbering its id and never attaching the ref, so
-          that element never syncs. This div is the guaranteed target. */}
+    <PlayableBody
+      data={data}
+      setData={setData}
+      caps={props.caps}
+      handle={props.handle}
+      resetSignal={props.resetSignal}
+    >
+      {/* playhtml's HOC walks the REACT ELEMENT TREE it is handed, not rendered
+          DOM, for the first host element to clone its id and ref onto. It has
+          to be right here in the HOC's own JSX: hidden inside PlayableBody's
+          render it is invisible to that walk, which then recurses into the
+          child component (DesktopIcon) and clobbers its id. The test "keeps
+          each desktop icon id intact" is what caught that. */}
       <div data-play-anchor>{props.children}</div>
-    </PlayableSurface>
+    </PlayableBody>
   ),
 )
 
@@ -71,7 +110,7 @@ class PlayBoundary extends Component<
   }
 }
 
-export function Playable({ id, caps, children, handle }: PlayableProps) {
+export function Playable({ id, caps, children, handle, resetSignal }: PlayableProps) {
   return (
     <PlayBoundary
       fallback={
@@ -80,7 +119,7 @@ export function Playable({ id, caps, children, handle }: PlayableProps) {
         </PlayableSurface>
       }
     >
-      <SharedPlayable id={id} caps={caps} handle={handle}>
+      <SharedPlayable id={id} caps={caps} handle={handle} resetSignal={resetSignal}>
         {children}
       </SharedPlayable>
     </PlayBoundary>
