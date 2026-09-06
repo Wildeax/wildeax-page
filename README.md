@@ -66,17 +66,13 @@ A simple card wrapper with optional title:
 
 3. Open your browser and navigate to `http://localhost:5173`
 
-## 📝 Notes for Next AI Agent
+## Notes for the next agent
 
-This project is set up with:
-- Modern React patterns and hooks
-- TypeScript for type safety
-- Tailwind CSS for styling
-- Component-based architecture
-- Path aliases configured (`@/components`, `@/`)
-- Development-ready configuration
+Start with `docs/HANDOFF.md`. It says what is in production, where every
+piece lives, how to run the browser gate, and what is pending (wcat, the
+pet, is designed in `docs/superpowers/specs/2026-09-05-wcat-design.md` and
+waits for the owner's approval).
 
-Feel free to build upon this foundation!
 ## The shared play layer
 
 Every visitor can drag, spin and scale the page's elements and place stickers,

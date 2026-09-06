@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .wrangler
+
+# Browser gate output
+scripts/gate/*.png
+scripts/gate/shots/
+scripts/gate/*.html

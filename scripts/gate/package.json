@@ -1,0 +1,9 @@
+{
+  "name": "wildeax-gate",
+  "private": true,
+  "type": "module",
+  "description": "Real-browser checks for wildeax.com. Not part of the site build.",
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}

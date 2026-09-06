@@ -1,0 +1,152 @@
+# wcat: a black cat that lives on the WILDEAX OS desktop
+
+Status: **designed, not approved, not started.** The owner answered the three
+scoping questions below on 2026-09-05 and then asked for a hand-off instead
+of approving the design. Whoever picks this up: read this, read
+`docs/HANDOFF.md`, then get an explicit yes on the design before writing code.
+
+## What the owner asked for
+
+Verbatim: "I want to have a pet. a black cat that can jump over windows stand
+on them, you can drag him and it will become a ball and it can bounce over the
+page boundaries. its going to be called wcat and it going to have to simple
+but cool face proportions."
+
+Two reference images were pasted in chat. Only the face survived into the
+session transcript. Its proportions, measured on the 500x500 image:
+
+- Black square background (the cat is a silhouette).
+- Two white circular eyes, diameter 22% of width, centers at x 25% and x 75%,
+  y 42%. No pupils.
+- A white "^" mouth, apex at x 50%, y 61%, arms reaching down to y 70% at
+  x 40% and x 60%. Stroke about 4.5% of width, rounded caps.
+
+The other image (a cat body reference) was not captured. Ask the owner for
+it again before drawing the body.
+
+## Decisions already taken with the owner
+
+| Question | Answer |
+|---|---|
+| One shared cat or one per visitor? | **Your own cat.** Physics runs in the visitor's browser only. Nothing is written to playhtml or localStorage. |
+| Idle behaviour | **All of it**: roams window tops and the floor, sits and blinks and tracks the pointer with its eyes, follows a parked pointer, naps. |
+| Phones | **Sits on the bottom edge.** Same component, no platforms, no roaming, can be flicked after a long-press. |
+
+## Approach
+
+Hand-rolled. One `requestAnimationFrame` loop, a pure physics module, a pure
+behaviour state machine, and platforms read each frame from the DOM rects of
+visible window title bars. No new dependency.
+
+Rejected: matter.js (about 80 KB for one rigid body, and platforms would still
+need syncing every frame) and CSS-only animation (cannot throw a ball).
+
+## Where it lives
+
+```
+src/wcat/
+  physics.ts     pure: step(state, dt, world) -> state. Gravity, bounds, platforms.
+  brain.ts       pure: state machine over {sit, walk, jump, follow, nap, fall, ball}.
+                 Takes an injected clock and random so tests are deterministic.
+  Wcat.tsx       the component: rAF loop, pointer handling, writes transform to
+                 the element through a ref. React state only for form and mood.
+src/index.css    cat and ball shapes, blink keyframes, morph transition.
+```
+
+`Desktop.tsx` mounts `<Wcat />` in both branches. On desktop the layer is
+`absolute inset-0 pointer-events-none` at z-index 35: above windows
+(`Z_BASE` 10 upward), under the sticker dock (40) and the taskbar (50). Only
+the cat element itself has `pointer-events: auto`. On phones the layer is
+`fixed inset-0`.
+
+## Look
+
+A 44 px black cat built from CSS shapes in one element: rounded body, two
+triangle ears, a curved tail. Face per the reference above, scaled to the
+body. Eyes blink every 3 to 6 s (scaleY to 0.1 for 120 ms) and shift 2 px
+toward the pointer. Facing flips with `scaleX(-1)` on the body only, never
+the face container, so the mouth stays symmetric.
+
+Ball form: a 36 px black circle, ears and tail hidden, face kept and rotated
+by distance rolled divided by radius. Morph is a 150 ms transition on width,
+height and border-radius.
+
+## World
+
+- Bounds: the desktop root rect minus the 44 px taskbar. Floor is the
+  taskbar's top edge. On phones the floor is the viewport bottom minus 8 px.
+- Platforms: the top edge of every visible window's `[data-drag-handle]`,
+  read with `getBoundingClientRect` each frame (at most 11 elements).
+  Hidden windows are skipped because their wrapper is `visibility: hidden`;
+  check `[data-window]:not([hidden])`.
+- Gravity 2200 px/s².
+
+## Brain, cat form
+
+| State | Enter | Behaviour | Leave |
+|---|---|---|---|
+| sit | after landing, after walk, after wake | blink, eyes toward pointer | random 2 to 8 s → walk; pointer parked → follow; 45 s no pointer → nap |
+| walk | from sit | 70 px/s along the current surface, flip at edges | reached edge → jump or turn; random 1 to 4 s → sit |
+| jump | from walk or follow | parabola to a platform within 260 px sideways and 180 px up, launch velocity from the gap; no target → drop to the floor | landing → sit (or follow if still following) |
+| follow | pointer still 1.5 s inside the desktop and more than 120 px away | walk toward pointer x; jump toward a surface under it when reachable | within 40 px → sit; 6 s elapsed → sit; pointer moves → sit |
+| nap | 45 s without pointer movement | eyes closed, body 10% flatter | pointer within 150 px or any drag → sit |
+| fall | the surface under the feet is gone (window closed, minimized or moved) | gravity, land on the first platform below or the floor, squash 120 ms | landing → sit |
+
+## Ball
+
+- Lift: pointerdown on the cat and 5 px of movement (mouse or pen), or a
+  250 ms hold (touch). Reuse `exceedsDragThreshold` and `LONG_PRESS_MS` from
+  `src/play/drag.ts`. Form becomes ball, position follows the pointer.
+- Throw: on release, velocity is the mean over the last 80 ms of samples,
+  capped at 1800 px/s.
+- Flight: gravity, bounce off the four bounds with restitution 0.72, roll on
+  the floor with friction (velocity x times 0.985 per frame at 60 Hz, scaled
+  by dt). The ball ignores windows.
+- Rest: speed under 40 px/s while on the floor for 300 ms → unroll into cat
+  form → sit.
+- `prefers-reduced-motion`: no roam, follow or nap. Drag still works. Release
+  drops straight down with no bounce and lands as a cat.
+
+## Phones
+
+Same component. Floor at the viewport bottom minus 8 px, no platforms, brain
+restricted to sit. Long-press to lift so a normal swipe still scrolls. The
+ball bounces off the viewport edges like on desktop.
+
+## Not stored, not shared
+
+Every load starts the cat on the floor at 35% of the width, facing right.
+Nothing goes to playhtml or localStorage. If the owner later wants a shared
+cat, position and form go behind the seam in `src/play/sync.tsx` like a
+`Playable`, and the client that touched it last drives the simulation.
+
+## Testing
+
+Pure modules run in the default node environment. The component test is
+jsdom per-file (`// @vitest-environment jsdom`), like the other component
+tests. The pointer polyfill in `src/test-setup.ts` already covers
+PointerEvent and pointer capture.
+
+- `physics.test.ts`: gravity increases vy by g times dt; a ball crossing the
+  right bound reflects vx times 0.72; a ball on the floor loses speed and
+  reports rest; a falling cat whose x is over a platform stops at its top.
+- `brain.test.ts`: sit → walk after the timer; surface removed → fall → sit
+  on landing; 45 s idle → nap and pointer within 150 px → sit; pointer parked
+  far away → follow; follow gives up after 6 s.
+- `Wcat.test.tsx`: renders with `data-form="cat"`; pointerdown plus 40 px
+  move → `data-form="ball"`; pointerup then advancing fake timers past rest
+  → `data-form="cat"`; on the mobile branch no platforms are queried.
+- `scripts/gate/verify.mjs`: add a desktop check (cat present, drag 200 px →
+  ball, ends as a cat on the floor with no page errors) and a mobile check
+  (cat present at the bottom edge).
+
+## Budget
+
+About 450 lines including tests. Roughly 6 KB more in the bundle. Test the
+frame loop's cost with the Performance panel while ten windows are open; the
+DOM reads are the only per-frame work that scales.
+
+## Out of scope
+
+Sounds, more than one cat, persistence, sharing, the cat reacting to
+stickers, the cat pushing windows.
