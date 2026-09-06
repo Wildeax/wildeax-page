@@ -127,6 +127,22 @@ describe('PlayableSurface', () => {
     expect(onTransform).not.toHaveBeenCalled()
   })
 
+  it('lets a button marked data-drag-ok start a drag, which is what a desktop icon is', () => {
+    const onTransform = vi.fn()
+    const { container } = render(
+      <PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={onTransform}>
+        <button type="button" data-drag-ok>icon</button>
+      </PlayableSurface>,
+    )
+    const surface = container.firstElementChild as HTMLElement
+    givePage(surface, { left: 100, top: 100, width: 50, height: 50 }, 1000, 800)
+    const button = surface.querySelector('button')!
+    fireEvent.pointerDown(button, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(button, { pointerId: 1, clientX: 40, clientY: 20 })
+    fireEvent.pointerUp(button, { pointerId: 1, clientX: 40, clientY: 20 })
+    expect(onTransform).toHaveBeenCalledWith({ x: 40, y: 20, rotation: 0, scale: 1 })
+  })
+
   it('refuses native drag-and-drop, so an image inside cannot hijack the gesture', () => {
     const { container } = render(
       <PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={() => {}}>

@@ -17,6 +17,10 @@ export function DesktopIcon({ id, label, glyph, iconSrc, selected = false, pop =
     <button
       type="button"
       data-icon={id}
+      // A button, and also the drag handle. Without this the play layer's
+      // cancel selector (button, a, input...) swallowed every press and icons
+      // could not be dragged at all.
+      data-drag-ok
       data-selected={selected || undefined}
       onClick={onOpen}
       className={`group flex w-20 flex-col items-center gap-1 rounded p-2 text-center transition hover:bg-brand-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 ${

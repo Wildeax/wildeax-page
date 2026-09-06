@@ -132,6 +132,11 @@ describe('DesktopIcon', () => {
     expect(onOpen).toHaveBeenCalledTimes(1)
   })
 
+  it('opts back in to dragging, since the icon is both a button and the drag handle', () => {
+    render(<DesktopIcon id="art" label="art" glyph="🎨" onOpen={() => {}} />)
+    expect(document.querySelector('[data-icon="art"]')?.hasAttribute('data-drag-ok')).toBe(true)
+  })
+
   it('prefers a real image over the glyph when given one', () => {
     render(<DesktopIcon id="me" label="me.jpg" glyph="🖼️" iconSrc="/me.jpg" onOpen={() => {}} />)
     expect(document.querySelector('[data-icon="me"] img')).not.toBeNull()
