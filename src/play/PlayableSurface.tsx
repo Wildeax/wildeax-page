@@ -19,6 +19,7 @@ export interface PlayableSurfaceProps {
 
 interface DragState {
   pointerId: number
+  touch: boolean
   origin: Point
   startTransform: Transform
   /** False until the threshold is crossed, or until the touch long-press fires. */
@@ -71,6 +72,17 @@ export function PlayableSurface({ caps, transform, onTransform, children, handle
 
   useEffect(() => clearLongPress, [clearLongPress])
 
+  useEffect(() => {
+    const el = ref.current!
+    const onTouchMove = (e: TouchEvent) => {
+      // touch-action cannot be changed after a gesture starts. Keep swipes
+      // native until the hold, then stop the browser taking over this drag.
+      if (drag.current?.touch && drag.current.active && e.touches.length === 1 && e.cancelable) e.preventDefault()
+    }
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMove)
+  }, [])
+
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!canMove || e.button !== 0 || e.isPrimary === false) return
@@ -80,6 +92,7 @@ export function PlayableSurface({ caps, transform, onTransform, children, handle
       const pointerId = e.pointerId
       drag.current = {
         pointerId,
+        touch: e.pointerType === 'touch',
         origin: { x: e.clientX, y: e.clientY },
         startTransform: transform,
         // Mouse and pen arm immediately and wait for the 5px threshold. Touch

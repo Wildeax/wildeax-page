@@ -13,7 +13,19 @@ export function YarnToy({ model, mobile, label, help }: Props) {
   const [dock, setDock] = useState<HTMLElement | null>(null)
   const [active, setActive] = useState(false)
   const remove = useCallback(() => setActive(false), [])
-  useEffect(() => { setDock(document.querySelector<HTMLElement>('[data-sticker-dock]')) }, [])
+  useEffect(() => {
+    let target = document.querySelector<HTMLElement>('[data-sticker-dock]')
+    setDock(target)
+    // The responsive sticker subscription remounts its dock. Media-query
+    // listeners can commit in either order, so a mount-only lookup goes stale.
+    const observer = new MutationObserver(() => {
+      if (target?.isConnected) return
+      target = document.querySelector<HTMLElement>('[data-sticker-dock]')
+      setDock(target)
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
   return <>
     {dock && createPortal(<button type="button" data-yarn-toggle aria-label={label} title={help} aria-pressed={active}
       onClick={() => setActive((value) => !value)}

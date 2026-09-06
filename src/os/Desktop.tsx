@@ -158,6 +158,12 @@ export function Desktop() {
   }
 
   function openWindow(id: WindowId) {
+    if (!isDesktop) {
+      const card = document.getElementById(`mobile-${id}`)
+      card?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' })
+      card?.focus({ preventScroll: true })
+      return
+    }
     if (isMinimized(state, id)) return restoreWindow(id)
     const wasVisible = isVisible(state, id)
     dispatch({ type: 'open', id })
@@ -243,22 +249,20 @@ export function Desktop() {
     setMenu(null)
   }
 
-  // On mobile every window is already expanded, so WorkWindow's row buttons
-  // dispatch an open for something already visible. Harmless, and cheaper than
-  // a second code path; revisit only if it confuses anyone.
   if (!isDesktop) {
     return (
-      <div className="relative z-10 mx-auto flex max-w-xl flex-col gap-4 px-4 py-6">
-        <MobileHeader />
+      <main data-mobile className="mobile-page relative z-10 mx-auto flex max-w-xl flex-col gap-4">
+        <MobileHeader onNavigate={openWindow} />
         <Wcat mobile label={t('os.wcat.help')} toyLabel={t('os.wcat.yarn')} toyHelp={t('os.wcat.yarnHelp')} />
         {WINDOWS.map((w) => (
-          <div key={w.id} className="h-[min(70vh,520px)]">
-            <Window id={w.id} title={t(w.titleKey)} hidden={false} onClose={() => {}} onFocus={() => {}}>
-              {bodyFor(w.id, openWindow)}
-            </Window>
-          </div>
+          <section key={w.id} id={`mobile-${w.id}`} data-window={w.id} data-mobile-card
+            tabIndex={-1} aria-labelledby={`mobile-title-${w.id}`}
+            className="mobile-card rounded-xl border border-brand-400/25 bg-[#0b0e12]/95 shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-400">
+            <h2 id={`mobile-title-${w.id}`} className="rounded-t-xl border-b border-brand-400/20 bg-gradient-to-r from-brand-400/10 to-violet-500/10 px-4 py-3 font-mono text-xs tracking-wide text-brand-200">{t(w.titleKey)}</h2>
+            <div className="mobile-card-content px-4 py-4 text-sm text-zinc-300">{bodyFor(w.id, openWindow)}</div>
+          </section>
         ))}
-      </div>
+      </main>
     )
   }
 
@@ -410,19 +414,28 @@ export function Desktop() {
   )
 }
 
-function MobileHeader() {
-  const { lang, setLang } = useI18n()
+function MobileHeader({ onNavigate }: { onNavigate: (id: WindowId) => void }) {
+  const { lang, setLang, t } = useI18n()
   return (
-    <header className="flex items-center justify-between">
-      <span className="font-mono text-sm tracking-widest text-brand-300">WILDEAX OS</span>
+    <header className="mobile-header sticky z-40 -mx-1 rounded-b-xl border-b border-brand-400/15 bg-[#0b0e12]/95 px-1 backdrop-blur">
+      <div className="flex items-center justify-between">
+      <h1 className="font-mono text-sm tracking-widest text-brand-300">WILDEAX OS</h1>
       <button
         type="button"
         aria-label="Switch language"
         onClick={() => setLang(lang === 'en' ? 'es' : 'en')}
-        className="rounded border border-white/10 bg-white/5 px-2 py-1 font-mono text-[11px] text-zinc-300"
+        className="grid h-11 min-w-11 place-items-center rounded-lg border border-white/10 bg-white/5 px-3 font-mono text-xs text-zinc-200"
       >
         {lang === 'en' ? 'ES' : 'EN'}
       </button>
+      </div>
+      <nav aria-label={t('os.mobile.sections')} className="flex justify-between gap-1 py-1">
+        {(['readme', 'work', 'art', 'contact'] as const).map((id) => <a key={id} href={`#mobile-${id}`}
+          onClick={(e) => { e.preventDefault(); onNavigate(id) }}
+          className="flex min-h-11 items-center rounded-lg px-3 font-mono text-xs text-zinc-300 hover:bg-brand-400/10 hover:text-brand-200">
+          {t(`os.mobile.${id}`)}
+        </a>)}
+      </nav>
     </header>
   )
 }

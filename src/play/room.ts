@@ -3,9 +3,9 @@
  * old room and starts an empty one, which is the reset mechanism for the whole
  * site. There is deliberately no admin UI. See README.md.
  *
- * The room is shared by every host serving this Worker: production, every
- * preview URL, and any browser driven by the verification script. A
- * `?room=<name>` query parameter overrides it, so tests can run in a room of
+ * playhtml prefixes this room with the host, so production, previews and
+ * localhost have separate storage. On each host a `?room=<name>` query
+ * parameter overrides it, so tests can run in a room of
  * their own instead of rearranging the live desktop, and so the author can look
  * at a clean desktop without resetting everyone's.
  */

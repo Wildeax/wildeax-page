@@ -80,6 +80,11 @@ and that state is shared with everyone else and persists. Visitors also see each
 other's cursors. Design notes are in
 `docs/superpowers/specs/2026-09-04-shared-play-layer-design.md`.
 
+Sticker placements are shared within each layout, not between layouts:
+desktop uses `wildeax-stickers`, mobile uses `wildeax-stickers-mobile`.
+The cat and yarn toy are private. On phones, tap **Play** to open the palette;
+use **Remove stickers** to remove a placed sticker by tapping it.
+
 There is no admin UI and no moderation queue. Stickers come from a fixed palette
 and there is no text input anywhere in the feature, so the worst case is an
 arrangement you dislike rather than something written about you.
@@ -89,17 +94,17 @@ arrangement you dislike rather than something written about you.
 Bump the room number in `src/play/room.ts`:
 
 ```ts
-export const ROOM = 'wildeax-2'  // was wildeax-1
+const DEFAULT_ROOM = 'wildeax-2'  // increment this value to reset
 ```
 
 Then `npm run build && npx wrangler deploy`. The old room is abandoned rather
 than deleted, so the number only ever goes up.
 
-The room is shared by every host that serves the Worker: production, every
-preview URL, and any automated browser. To look at a clean desktop without
-resetting everyone's, or to run checks that must not rearrange the live one,
-add `?room=anything` to the URL. Bump `ROOM` before promoting a preview to
-production, or production inherits whatever the previews were left in.
+playhtml prefixes rooms with the host: production, preview hosts and localhost
+have separate storage. To look at a clean desktop or run a check without
+rearranging other visitors' layouts on that host, add `?room=anything` to the
+URL (1–40 letters, digits or hyphens). Always use a fresh room for browser
+tests. Do not bump the default room just to deploy: that abandons live data.
 
 ### Adding stickers
 
