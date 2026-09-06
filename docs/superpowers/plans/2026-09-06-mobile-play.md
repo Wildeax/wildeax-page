@@ -85,4 +85,10 @@ References: [device orientation permissions](https://developer.mozilla.org/en-US
   initially raced a peer acknowledgement twice; adding a 500ms settling wait
   made its network ordering explicit, and the full gate then passed.
   Workers Builds still fails at `https://github.com/Wildeax/wildeax-page/runs/101524117667`.
-  Production remains 100% version `5ce57800-77ec-412e-8293-f2bc146672f4`.
+  The owner approved this exact preview and it was promoted at 2026-09-06
+  17:08 UTC. Production is now 100% version
+  `b1e79cd7-d99c-43d0-9726-1ac405e1bec5`. The same 100 relevant browser checks
+  passed on `www.wildeax.com` after promotion. The live response returned HTTP
+  200 and bundle `index-Ch5vI-PA.js`. A read-only default-room probe found the
+  two existing stickers intact and no runtime errors; its transient WebSocket
+  close warnings occurred as the probe page shut down.

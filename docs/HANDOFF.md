@@ -1,6 +1,6 @@
 # Hand-off: wildeax.com (WILDEAX OS)
 
-Updated 2026-09-06 with a mobile-play preview; production is still the earlier mobile/sticker release.
+Updated 2026-09-06 after publishing mobile play.
 Read this first. It says what exists, where it is, how to
 check it, and what is pending.
 
@@ -24,9 +24,9 @@ never appear anywhere public.
 |---|---|
 | Repo | `D:\Projects\Wildeax\Porfolio\Webpage\wildeax-page`, remote `github.com/Wildeax/wildeax-page`, branch `main` |
 | Production | Cloudflare Worker `wildeax-page`, served at `https://www.wildeax.com`. Apex 301s to www through an account-level Bulk Redirect list |
-| Production version | Worker version `5ce57800-77ec-412e-8293-f2bc146672f4`, 100% traffic. Runtime commit `781b2fe`, merged via PR #2 at `28a0e2d` |
+| Production version | Worker version `b1e79cd7-d99c-43d0-9726-1ac405e1bec5`, 100% traffic. Runtime commit `08d46e9` |
 | Mobile/sticker preview | Version `5ce57800-77ec-412e-8293-f2bc146672f4`, runtime code from `781b2fe`. Use `https://5ce57800-wildeax-page.arena-riot-proxy.workers.dev/?room=mobile-review-5ce57800` |
-| New mobile-play preview (NOT live) | Branch `feat/mobile-play`. Version `b1e79cd7-d99c-43d0-9726-1ac405e1bec5`, runtime commit `08d46e9`. Use `https://b1e79cd7-wildeax-page.arena-riot-proxy.workers.dev/?room=phone-review-b1e79cd7` |
+| Mobile-play preview/live artifact | Version `b1e79cd7-d99c-43d0-9726-1ac405e1bec5`, runtime commit `08d46e9`. Use `https://b1e79cd7-wildeax-page.arena-riot-proxy.workers.dev/?room=phone-review-b1e79cd7` |
 | Shared room | `wildeax-2` in `src/play/room.ts`. Bump `DEFAULT_ROOM` to reset every visitor's positions |
 | Desktop code | `src/os/` (Desktop, Window, Taskbar, DesktopIcon, registry, windowState, marquee) |
 | Play layer | `src/play/` (PlayableSurface drag, sync.tsx is the only playhtml importer, StickerLayer) |
@@ -157,8 +157,8 @@ verification and release records. PR: `https://github.com/Wildeax/wildeax-page/p
 
 ## Pending
 
-Mobile play is committed through `08d46e9` on `feat/mobile-play` and uploaded
-for review, not deployed. It replaces the Play popover with a four-tool row
+Mobile play was published at 2026-09-06 17:08 UTC. The exact reviewed version
+is receiving 100% of production traffic. It replaces the Play popover with a four-tool row
 and swipeable sticker strip. It adds opt-in tilt, Pet, card perches, mobile
 yarn chasing and page-scroll support. Sensor readings remain local and are
 never requested on load. Cats now leave a perch to pursue a lower toy, lose
@@ -170,7 +170,10 @@ The 241 unit/component tests, production build and changed-file lint pass.
 Full lint keeps its 19 existing errors and one warning. The current preview
 passed its 100 relevant hosted checks: 34 main, 18 sticker/tail, 23
 yarn/selection and 25 mobile-play. Real iOS and Android sensor feel and Safari's
-permission UI remain untested. Preview it on a real phone before promotion.
+permission UI remain untested. The 100 relevant browser checks also passed on
+the live domain after promotion. The live response returned HTTP 200 and bundle
+`index-Ch5vI-PA.js`; a read-only default-room probe found its two stickers
+intact and no browser runtime errors.
 Details and verification are in
 `docs/superpowers/plans/2026-09-06-mobile-play.md`.
 
