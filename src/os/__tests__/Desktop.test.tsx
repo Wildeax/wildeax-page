@@ -89,6 +89,21 @@ describe('Desktop at desktop widths', () => {
     expect(wrapperOf('art').style.zIndex).toBe('')
   })
 
+  it('lets pointers fall through empty wrapper boxes to the window below', () => {
+    setViewport(true)
+    render(
+      <I18nProvider>
+        <Desktop />
+      </I18nProvider>,
+    )
+    // After a drag the wrapper box is empty but still where the anchor was.
+    // Only the box inside, which moves with the drag, may catch a press.
+    const wrapper = document.querySelector('[data-win-wrapper="work"]') as HTMLElement
+    const box = document.querySelector('[data-win-box="work"]') as HTMLElement
+    expect(wrapper.style.pointerEvents).toBe('none')
+    expect(box.style.pointerEvents).toBe('auto')
+  })
+
   it('makes closed wrappers invisible and non-interactive while open ones paint', () => {
     setViewport(true)
     render(

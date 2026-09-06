@@ -99,6 +99,12 @@ export const ROOM = 'wildeax-2'  // was wildeax-1
 Then `npm run build && npx wrangler deploy`. The old room is abandoned rather
 than deleted, so the number only ever goes up.
 
+The room is shared by every host that serves the Worker: production, every
+preview URL, and any automated browser. To look at a clean desktop without
+resetting everyone's, or to run checks that must not rearrange the live one,
+add `?room=anything` to the URL. Bump `ROOM` before promoting a preview to
+production, or production inherits whatever the previews were left in.
+
 ### Adding stickers
 
 Extend `STICKER_KINDS` in `src/play/stickers.ts`. Emoji use `glyph`, images use

@@ -215,6 +215,12 @@ export function Desktop() {
           // flight starts, while nothing paints and nothing intercepts a
           // pointer meant for the wallpaper behind it.
           visibility: shown ? undefined : 'hidden',
+          // The wrapper's own box stays at the authored anchor after the window
+          // inside is dragged away, leaving an empty, transparent rectangle
+          // that still wins hit-testing over whatever sits beneath it at a
+          // lower z-index. Found in Chromium: splitwars's empty wrapper was
+          // swallowing every press on work.exe's title bar.
+          pointerEvents: 'none',
         }
         // The flight animates the box INSIDE the surface's drag transform, not
         // the wrapper. Once a window has been dragged, the wrapper's border box
@@ -225,6 +231,8 @@ export function Desktop() {
         const boxStyle: CSSProperties & Record<`--${string}`, string> = {
           width: w.width,
           height: w.height,
+          // Re-enable what the wrapper turned off, on the thing that is drawn.
+          pointerEvents: 'auto',
           '--dock-dx': `${inFlight?.dx ?? 0}px`,
           '--dock-dy': `${inFlight?.dy ?? 0}px`,
         }
