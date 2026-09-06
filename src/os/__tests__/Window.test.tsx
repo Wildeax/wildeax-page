@@ -17,6 +17,18 @@ describe('Window', () => {
     expect(screen.getByText('hello')).toBeTruthy()
   })
 
+  it('marks its title bar as the drag handle, so body text stays selectable', () => {
+    render(
+      <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={() => {}}>
+        <p>hello</p>
+      </Window>,
+    )
+    const handle = screen.getByRole('dialog').querySelector('[data-drag-handle]')
+    expect(handle).not.toBeNull()
+    expect(handle?.textContent).toContain('readme.txt')
+    expect(screen.getByText('hello').closest('[data-drag-handle]')).toBeNull()
+  })
+
   it('is a labelled dialog for screen readers', () => {
     render(
       <Window id="readme" title="readme.txt" hidden={false} onClose={() => {}} onFocus={() => {}}>

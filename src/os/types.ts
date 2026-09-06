@@ -14,6 +14,7 @@ export type WindowId =
   | 'sweepr98'
   | 'collab'
   | 'pos'
+  | 'questionary'
 
 export interface WindowDef {
   id: WindowId

@@ -139,6 +139,31 @@ describe('PlayableSurface', () => {
     expect(evt.defaultPrevented).toBe(true)
   })
 
+  it('with a handle, a press on the body does not drag but a press on the handle does', () => {
+    const onTransform = vi.fn()
+    const { container } = render(
+      <PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={onTransform} handle="[data-drag-handle]">
+        <div>
+          <div data-drag-handle>title</div>
+          <p>selectable body text</p>
+        </div>
+      </PlayableSurface>,
+    )
+    const surface = container.firstElementChild as HTMLElement
+    givePage(surface, { left: 100, top: 100, width: 50, height: 50 }, 1000, 800)
+    const body = surface.querySelector('p')!
+    fireEvent.pointerDown(body, { pointerId: 1, clientX: 0, clientY: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(body, { pointerId: 1, clientX: 40, clientY: 20 })
+    fireEvent.pointerUp(body, { pointerId: 1, clientX: 40, clientY: 20 })
+    expect(onTransform).not.toHaveBeenCalled()
+
+    const title = surface.querySelector('[data-drag-handle]')!
+    fireEvent.pointerDown(title, { pointerId: 2, clientX: 0, clientY: 0, pointerType: 'mouse' })
+    fireEvent.pointerMove(title, { pointerId: 2, clientX: 40, clientY: 20 })
+    fireEvent.pointerUp(title, { pointerId: 2, clientX: 40, clientY: 20 })
+    expect(onTransform).toHaveBeenCalledWith({ x: 40, y: 20, rotation: 0, scale: 1 })
+  })
+
   it('ignores drags when move is not among its capabilities', () => {
     const onTransform = vi.fn()
     const { container } = render(

@@ -21,6 +21,8 @@ export interface PlayableProps {
   id: string
   caps: readonly Capability[]
   children: ReactNode
+  /** Forwarded to PlayableSurface: restrict drag starts to this selector. */
+  handle?: string
 }
 
 /**
@@ -33,7 +35,7 @@ export interface PlayableProps {
 const SharedPlayable = withSharedState(
   (props: PlayableProps) => ({ defaultData: IDENTITY_TRANSFORM, id: props.id }),
   ({ data, setData }: { data: Transform; setData: (t: Transform) => void }, props: PlayableProps) => (
-    <PlayableSurface caps={props.caps} transform={data} onTransform={setData}>
+    <PlayableSurface caps={props.caps} transform={data} onTransform={setData} handle={props.handle}>
       {/* playhtml's HOC walks the React tree for the first DOM element and
           clones its id and ref onto it. PlayableSurface is a component, so it
           looks inside; if the child is also a component with no DOM child of
@@ -69,7 +71,7 @@ class PlayBoundary extends Component<
   }
 }
 
-export function Playable({ id, caps, children }: PlayableProps) {
+export function Playable({ id, caps, children, handle }: PlayableProps) {
   return (
     <PlayBoundary
       fallback={
@@ -78,7 +80,7 @@ export function Playable({ id, caps, children }: PlayableProps) {
         </PlayableSurface>
       }
     >
-      <SharedPlayable id={id} caps={caps}>
+      <SharedPlayable id={id} caps={caps} handle={handle}>
         {children}
       </SharedPlayable>
     </PlayBoundary>

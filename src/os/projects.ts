@@ -58,4 +58,12 @@ export const PROJECTS: readonly Project[] = [
     stackKey: 'os.project.pos.stack',
     stackIcons: 'java,ts,react,tauri,rust,postgres',
   },
+  {
+    id: 'questionary',
+    nameKey: 'os.project.questionary.name',
+    descKey: 'os.project.questionary.desc',
+    stackKey: 'os.project.questionary.stack',
+    stackIcons: 'react,ts,tailwind,vite',
+    href: 'https://github.com/Wildeax/Questionary',
+  },
 ]

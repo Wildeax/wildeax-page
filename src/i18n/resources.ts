@@ -8,6 +8,10 @@ type Resources = Record<Lang, Dict>
 
 export const resources: Resources = {
   en: {
+    'os.win.questionary': 'questionary.exe',
+    'os.project.questionary.name': 'Questionary',
+    'os.project.questionary.desc': 'Open-source quiz app for studying. Loads questions from JSON or YAML, shuffles them, tracks progress, and resumes an unfinished session.',
+    'os.project.questionary.stack': 'React, TypeScript, Tailwind CSS, Vite',
     'nav.arena': 'Arena Assistant',
     'os.win.readme': 'readme.txt',
     'os.win.work': 'work.exe',
@@ -20,7 +24,7 @@ export const resources: Resources = {
     'os.win.collab': 'mood-collab.exe',
     'os.win.pos': 'pharmacy-erp.exe',
     'os.readme.p1': 'Francol Steven Aristizabal Romero. Medellín, Colombia. Co-founder at Mood Studios.',
-    'os.readme.p2': 'I came up through digital art and game design. These days most of my hours go to the systems underneath: game servers, desktop clients, and the pipelines that ship them.',
+    'os.readme.p2': 'Game designer first, then UX and UI. I care how an interface feels to use, and I make the apps I want to exist: the look, the interaction, the details. When one needs a backend I build it, because the app needs it, not because it is the point.',
     'os.readme.p3': 'Self-taught, still learning in public.',
     'os.work.heading': 'Things I am building',
     'os.work.open': 'Open',
@@ -79,6 +83,10 @@ export const resources: Resources = {
     'notfound.back': 'Go back home',
   },
   es: {
+    'os.win.questionary': 'questionary.exe',
+    'os.project.questionary.name': 'Questionary',
+    'os.project.questionary.desc': 'App de cuestionarios de código abierto para estudiar. Carga preguntas desde JSON o YAML, las mezcla, guarda el progreso y retoma una sesión sin terminar.',
+    'os.project.questionary.stack': 'React, TypeScript, Tailwind CSS, Vite',
     'nav.arena': 'Arena Assistant',
     'os.win.readme': 'leeme.txt',
     'os.win.work': 'trabajo.exe',
@@ -91,7 +99,7 @@ export const resources: Resources = {
     'os.win.collab': 'mood-collab.exe',
     'os.win.pos': 'erp-farmacia.exe',
     'os.readme.p1': 'Francol Steven Aristizabal Romero. Medellín, Colombia. Cofundador en Mood Studios.',
-    'os.readme.p2': 'Vengo del arte digital y el diseño de juegos. Hoy la mayoría de mis horas van a los sistemas de abajo: servidores de juego, clientes de escritorio y las tuberías que los publican.',
+    'os.readme.p2': 'Diseñador de juegos primero, y después UX y UI. Me importa cómo se siente usar una interfaz, y hago las apps que quiero que existan: el look, la interacción, los detalles. Cuando una necesita backend, lo construyo porque la app lo necesita, no porque sea el punto.',
     'os.readme.p3': 'Autodidacta, y sigo aprendiendo en público.',
     'os.work.heading': 'En lo que estoy trabajando',
     'os.work.open': 'Abrir',

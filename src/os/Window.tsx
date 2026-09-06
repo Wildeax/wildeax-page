@@ -34,7 +34,12 @@ export function Window({ id, title, hidden, onClose, onFocus, onMinimize, childr
       style={{ display: hidden ? 'none' : undefined }}
       className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-brand-400/30 bg-[#0b0e12]/95 shadow-[0_0_0_1px_rgba(34,211,238,0.08),0_18px_48px_rgba(0,0,0,0.6)] backdrop-blur"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-brand-400/25 bg-gradient-to-r from-brand-400/15 to-violet-500/15 px-3 py-1.5">
+      {/* The drag handle. Only the title bar moves the window, so text in the
+          body can be selected the way it can in any real OS. */}
+      <div
+        data-drag-handle
+        className="flex shrink-0 cursor-grab select-none items-center justify-between gap-2 border-b border-brand-400/25 bg-gradient-to-r from-brand-400/15 to-violet-500/15 px-3 py-1.5 active:cursor-grabbing"
+      >
         <span className="truncate font-mono text-xs tracking-wide text-brand-200">{title}</span>
         <div className="flex shrink-0 items-center gap-1">
           {onMinimize && (

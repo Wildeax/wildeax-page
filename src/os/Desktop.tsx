@@ -238,7 +238,7 @@ export function Desktop() {
         }
         return (
           <div key={w.id} data-win-wrapper={w.id} className="absolute" style={wrapperStyle}>
-            <Playable id={`win-${w.id}`} caps={['move']}>
+            <Playable id={`win-${w.id}`} caps={['move']} handle="[data-drag-handle]">
               <div
                 data-win-box={w.id}
                 className={inFlight ? `os-flight-${inFlight.kind}` : undefined}

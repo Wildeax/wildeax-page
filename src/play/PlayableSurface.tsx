@@ -8,6 +8,13 @@ export interface PlayableSurfaceProps {
   transform: Transform
   onTransform: (t: Transform) => void
   children: ReactNode
+  /**
+   * CSS selector. When set, only a press inside a matching descendant starts
+   * a drag; presses elsewhere are left alone, so text in a window body can be
+   * selected. Windows pass their title bar. Icons and stickers pass nothing
+   * and drag from anywhere, which is right for them.
+   */
+  handle?: string
 }
 
 interface DragState {
@@ -39,7 +46,7 @@ function prefersReducedMotion(): boolean {
  * one. Imports nothing from playhtml so it can be tested alone and so the
  * offline path in sync.tsx can render it inert.
  */
-export function PlayableSurface({ caps, transform, onTransform, children }: PlayableSurfaceProps) {
+export function PlayableSurface({ caps, transform, onTransform, children, handle }: PlayableSurfaceProps) {
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef<DragState | null>(null)
   const longPress = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -60,7 +67,9 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!canMove) return
-      if ((e.target as Element).closest(NO_DRAG_SELECTOR)) return
+      const target = e.target as Element
+      if (target.closest(NO_DRAG_SELECTOR)) return
+      if (handle && !target.closest(handle)) return
       const pointerId = e.pointerId
       drag.current = {
         pointerId,
@@ -80,7 +89,7 @@ export function PlayableSurface({ caps, transform, onTransform, children }: Play
         }, LONG_PRESS_MS)
       }
     },
-    [canMove, transform],
+    [canMove, handle, transform],
   )
 
   const onPointerMove = useCallback(

@@ -32,6 +32,7 @@ export const WINDOWS: readonly WindowDef[] = [
   { id: 'sweepr98', titleKey: 'os.win.sweepr98', width: 440, height: 300, x: 360, y: 200, openOnLoad: false, glyph: '💣', iconSrc: sweeprIcon },
   { id: 'collab', titleKey: 'os.win.collab', width: 440, height: 320, x: 390, y: 230, openOnLoad: false, glyph: '🔗' },
   { id: 'pos', titleKey: 'os.win.pos', width: 440, height: 320, x: 420, y: 260, openOnLoad: false, glyph: '🏥' },
+  { id: 'questionary', titleKey: 'os.win.questionary', width: 440, height: 300, x: 450, y: 290, openOnLoad: false, glyph: '🎯' },
 ]
 
 /**
