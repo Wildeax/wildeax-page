@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
 import { I18nProvider } from '@/i18n'
 import { Desktop } from '@/os/Desktop'
 import { WINDOWS } from '@/os/registry'
@@ -35,9 +35,26 @@ describe('Desktop at mobile widths', () => {
         <Desktop />
       </I18nProvider>,
     )
-    expect(screen.getAllByRole('dialog')).toHaveLength(WINDOWS.length)
+    expect(screen.getAllByRole('region')).toHaveLength(WINDOWS.length)
+    expect(screen.queryAllByRole('dialog')).toHaveLength(0)
+    expect(screen.queryAllByRole('button', { name: /^Close / })).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /switch language/i })).toBeTruthy()
     expect(document.querySelector('[data-taskbar]')).toBeNull()
+  })
+
+  it('takes a project-row tap to its mobile card and offers section navigation', () => {
+    setViewport(false)
+    const scroll = vi.fn()
+    const original = HTMLElement.prototype.scrollIntoView
+    HTMLElement.prototype.scrollIntoView = scroll
+    try {
+      render(<I18nProvider><Desktop /></I18nProvider>)
+      const work = screen.getByRole('region', { name: 'work.exe' })
+      fireEvent.click(within(work).getAllByRole('button')[0])
+      expect(scroll).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+      expect(document.activeElement).toBe(screen.getByRole('region', { name: 'splitwars.exe' }))
+      expect(screen.getByRole('navigation', { name: 'Sections' })).toBeTruthy()
+    } finally { HTMLElement.prototype.scrollIntoView = original }
   })
 })
 

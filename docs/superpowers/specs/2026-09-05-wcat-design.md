@@ -1,7 +1,9 @@
 # wcat: a black cat that lives on the WILDEAX OS desktop
 
-Status: **implemented, awaiting preview review.** The owner approved the
-presented design with "Go" on 2026-09-05. Work is on `feat/wcat`.
+Status: **implemented, approved and deployed.** The owner approved the
+presented design with "Go" on 2026-09-05. PR #1 merged to `main` at `5a35ff9`;
+Worker `33cf49c7` was published with explicit approval. Current release and
+mobile follow-up details are in `docs/HANDOFF.md`.
 The missing body reference remains an art-review limitation. The first
 reviewable version uses the rounded silhouette described below.
 
@@ -9,7 +11,7 @@ The owner's preview feedback added petting, poking, toy-like hunting,
 half-open waking eyes and floating sleep marks. Later feedback added gentle
 window placement, live attention bouts, a flexible tail, harder-to-trigger
 petting, rare dizziness, edge inspection and private app visits.
-The next pass adds a private yarn toy, live selection-box collisions and
+The following pass added a private yarn toy, live selection-box collisions and
 perching, right-click sticker removal, and a flat tail attached behind the
 body. Verification records are in the behavior, handling and toy plans.
 

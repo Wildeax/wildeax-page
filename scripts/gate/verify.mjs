@@ -5,8 +5,8 @@ import { checkDesktopCat, checkMobileCat } from './wcat.mjs'
 
 const base = process.argv[2]
 if (!base) throw new Error('usage: node verify.mjs <url>')
-// A fresh room every run. The room is shared across every host serving the
-// Worker, so without this each run rearranges the author's real desktop.
+// A fresh room every run. On the production host, omitting this would
+// rearrange the author's and visitors' real desktop. Previews are host-scoped.
 const room = `verify-${Date.now().toString(36)}`
 const url = `${base.replace(/\/$/, '')}/?room=${room}`
 console.log(`room: ${room}`)

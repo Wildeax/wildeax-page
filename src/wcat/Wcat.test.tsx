@@ -26,6 +26,19 @@ function move(x = 340, y = 400, pointerType = 'mouse') {
 }
 
 describe('wcat interaction', () => {
+  it('reconnects the private toy control when a layout change replaces the dock', async () => {
+    const view = render(<div><div data-sticker-dock key="desktop" /><Wcat label="wcat" /></div>)
+    fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))
+    view.rerender(<div><div data-sticker-dock key="mobile" /><Wcat label="wcat" /></div>)
+    await act(async () => { await Promise.resolve() })
+    const toggle = screen.getByRole('button', { name: 'Yarn toy, only yours' })
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(toggle)
+    expect(view.container.querySelector('[data-yarn]')).toBeNull()
+    view.unmount()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   it('requires a deliberate yarn drag and gives a poke priority over play', () => {
     const view = render(<div data-desktop><div data-sticker-dock /><Wcat label="wcat" /></div>)
     fireEvent.click(screen.getByRole('button', { name: 'Yarn toy, only yours' }))

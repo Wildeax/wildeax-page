@@ -3,6 +3,8 @@ import { PlayableSurface } from '@/play/PlayableSurface'
 import { useSharedList } from '@/play/sync'
 import { addSticker, STICKER_KINDS } from '@/play/stickers'
 import type { PlacedSticker, StickerKind } from '@/play/stickers'
+import { useIsDesktop } from '@/os/useIsDesktop'
+import { useI18n } from '@/i18n'
 
 const EMPTY: PlacedSticker[] = []
 
@@ -19,28 +21,38 @@ function kindById(id: string): StickerKind | undefined {
 }
 
 export function StickerLayer() {
-  const [stickers, setStickers] = useSharedList<PlacedSticker>('wildeax-stickers', EMPTY)
+  const isDesktop = useIsDesktop()
+  // Remount the subscription on rotation/resizing: a list from the previous
+  // layout must never be written into the new layout's collection.
+  return <StickerScene key={isDesktop ? 'desktop' : 'mobile'} isDesktop={isDesktop} />
+}
+
+function StickerScene({ isDesktop }: { isDesktop: boolean }) {
+  const { t } = useI18n()
+  // Keep the existing desktop collection. Old out-of-bounds placements are
+  // clipped, not deleted; phones start with an independent shared canvas.
+  const [stickers, setStickers] = useSharedList<PlacedSticker>(isDesktop ? 'wildeax-stickers' : 'wildeax-stickers-mobile', EMPTY)
   const [selected, setSelected] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [erasing, setErasing] = useState(false)
 
   useEffect(() => {
-    if (!selected) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelected(null)
+      if (e.key === 'Escape') { setSelected(null); setErasing(false); setOpen(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selected])
+  }, [])
 
   const placed = Array.isArray(stickers) ? stickers : EMPTY
 
   return (
     <>
-      {/* Placed stickers live in DOCUMENT coordinates, so this container is
-          absolute inside the page wrapper rather than fixed to the viewport.
-          Fixed would pin every sticker to the window and drag them along as
-          the page scrolls. aria-hidden because they carry no information a
-          screen reader needs, and announcing 300 of them is hostile. */}
-      <div className="pointer-events-none absolute inset-0 z-30" aria-hidden="true">
+      {/* Mobile stickers use document coordinates; desktop uses its viewport.
+          Neither layer may enlarge the page, including legacy remote data. */}
+      <div data-sticker-layer data-sticker-scope={isDesktop ? 'desktop' : 'mobile'}
+        className={`pointer-events-none inset-0 z-30 overflow-clip ${isDesktop ? 'fixed' : 'absolute'}`}
+        aria-hidden={erasing ? undefined : true}>
         {placed.map((s) => {
           const kind = kindById(s.kind)
           if (!kind) return null
@@ -51,13 +63,23 @@ export function StickerLayer() {
           // pointer move is chatty but fine at the 300 cap.
           return (
             <div key={s.id} data-sticker={s.id} data-sticker-kind={s.kind} className="pointer-events-auto absolute left-0 top-0"
+              role={erasing ? 'button' : undefined}
+              tabIndex={erasing ? 0 : undefined}
+              aria-label={erasing ? `${t('os.play.erase')}: ${kind.label}` : undefined}
+              onClick={erasing ? () => setStickers(placed.filter((sticker) => sticker.id !== s.id)) : undefined}
+              onKeyDown={erasing ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setStickers(placed.filter((sticker) => sticker.id !== s.id))
+                }
+              } : undefined}
               onContextMenu={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
                 setStickers(placed.filter((sticker) => sticker.id !== s.id))
               }}>
               <PlayableSurface
-                caps={['move']}
+                caps={erasing ? [] : ['move']}
                 transform={{ x: s.x, y: s.y, rotation: s.rotation, scale: s.scale }}
                 onTransform={(next) =>
                   setStickers(placed.map((p) => (p.id === s.id ? { ...p, x: next.x, y: next.y } : p)))
@@ -83,10 +105,9 @@ export function StickerLayer() {
               addSticker(placed, {
                 id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                 kind: selected,
-                // Viewport coords plus scroll offset, because the layer above
-                // positions in document space.
-                x: e.clientX + window.scrollX - 16,
-                y: e.clientY + window.scrollY - 16,
+                x: Math.max(8, Math.min(window.innerWidth - 40, e.clientX - 16)),
+                y: Math.max(8, Math.min((isDesktop ? window.innerHeight : document.documentElement.scrollHeight) - 40,
+                  e.clientY + (isDesktop ? 0 : window.scrollY) - 16)),
                 rotation: Math.round((Math.random() - 0.5) * 40),
                 scale: 1,
                 placedAt: Date.now(),
@@ -97,8 +118,12 @@ export function StickerLayer() {
         />
       )}
 
-      {/* Palette dock. */}
-      <div data-sticker-dock className="fixed bottom-16 left-1/2 z-40 flex md:bottom-24 -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur">
+      {/* Keep the dock mounted while collapsed: the private yarn toggle is
+          portalled into it and must survive opening/closing the phone tray. */}
+      <div className={isDesktop ? 'contents' : 'mobile-play-panel fixed z-40 rounded-2xl border border-white/15 bg-[#11141c]/95 p-3 shadow-2xl backdrop-blur'}
+        style={!isDesktop && !open ? { display: 'none' } : undefined} id="play-panel">
+      {!isDesktop && <p className="mb-3 text-xs leading-relaxed text-zinc-300">{t('os.play.help')}</p>}
+      <div data-sticker-dock className={isDesktop ? 'fixed bottom-24 left-1/2 z-40 flex -translate-x-1/2 flex-wrap justify-center gap-1 rounded-2xl border border-white/10 bg-black/60 p-2 backdrop-blur' : 'mobile-play-grid gap-1'}>
         {STICKER_KINDS.map((kind) => (
           <button
             key={kind.id}
@@ -106,7 +131,7 @@ export function StickerLayer() {
             title={kind.label}
             aria-label={kind.label}
             aria-pressed={selected === kind.id}
-            onClick={() => setSelected(selected === kind.id ? null : kind.id)}
+            onClick={() => { setSelected(selected === kind.id ? null : kind.id); setErasing(false); if (!isDesktop) setOpen(false) }}
             className={`flex h-11 w-11 items-center justify-center rounded-xl transition ${
               selected === kind.id ? 'bg-brand-400/30 ring-2 ring-brand-400' : 'hover:bg-white/10'
             }`}
@@ -115,6 +140,22 @@ export function StickerLayer() {
           </button>
         ))}
       </div>
+      {!isDesktop && <button type="button" className="mt-2 min-h-11 w-full rounded-xl border border-white/15 px-3 text-sm"
+        onClick={() => { setErasing(true); setSelected(null); setOpen(false) }}>{t('os.play.erase')}</button>}
+      </div>
+
+      {!isDesktop && (selected || erasing ? (
+        <div className="mobile-play-status fixed z-40 flex items-center gap-3 rounded-2xl border border-white/15 bg-[#11141c]/95 p-2 pl-3 shadow-xl">
+          <p role="status" className="text-xs leading-relaxed">{t(erasing ? 'os.play.erasing' : 'os.play.placing')}</p>
+          <button type="button" className="min-h-11 shrink-0 rounded-xl border border-white/20 px-3 text-sm"
+            onClick={() => { setSelected(null); setErasing(false) }}>{t(erasing ? 'os.play.done' : 'os.play.cancel')}</button>
+        </div>
+      ) : (
+        <button type="button" className="mobile-play-toggle fixed z-40 min-h-11 rounded-full border border-white/20 bg-[#11141c]/95 px-4 text-sm shadow-xl"
+          aria-expanded={open} aria-controls="play-panel" onClick={() => setOpen(!open)}>
+          {t(open ? 'os.play.close' : 'os.play.open')}
+        </button>
+      ))}
     </>
   )
 }

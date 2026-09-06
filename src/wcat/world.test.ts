@@ -2,7 +2,28 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { readWorld } from './world'
 
-afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks() })
+afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+it('keeps the mobile floor above its safe-area padding', () => {
+  const layer = document.createElement('div')
+  layer.style.paddingBottom = '42px'
+  document.body.append(layer)
+  vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 844))
+  expect(readWorld(layer, true, false).floor).toBe(802)
+  expect(readWorld(layer, false, false).floor).toBe(800)
+})
+
+it('follows a smaller visual viewport without shrinking desktop or app rooms', () => {
+  const layer = document.createElement('div')
+  document.body.append(layer)
+  vi.spyOn(layer, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 390, 844))
+  vi.stubGlobal('visualViewport', { height: 500, offsetTop: 20, scale: 1 })
+  expect(readWorld(layer, true, false).floor).toBe(512)
+  expect(readWorld(layer, false, false).floor).toBe(800)
+  expect(readWorld(layer, true, false, true).floor).toBe(836)
+  vi.stubGlobal('visualViewport', { height: 500, offsetTop: 20, scale: 2 })
+  expect(readWorld(layer, true, false).floor).toBe(836)
+})
 
 it('reads a live selection as a solid rectangle and temporary perch', () => {
   const root = document.createElement('div')

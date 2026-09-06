@@ -7,6 +7,14 @@ export function readWorld(layer: HTMLElement, mobile: boolean, reducedMotion: bo
   const width = rect.width || window.innerWidth
   const height = rect.height || window.innerHeight
   const world = { width, floor: Math.max(CAT_SIZE, height - (mobile ? 8 : 44)), left: rect.left, top: rect.top, reducedMotion }
+  if (mobile && !room) {
+    const padding = Math.max(8, parseFloat(getComputedStyle(layer).paddingBottom) || 0)
+    const viewport = window.visualViewport
+    // Browser chrome/keyboards can reduce the visible floor independently of
+    // the layout viewport. Pinch zoom should not reposition the pet.
+    const visibleHeight = viewport?.scale === 1 ? Math.min(height, viewport.offsetTop + viewport.height - rect.top) : height
+    world.floor = Math.max(CAT_SIZE, visibleHeight - padding)
+  }
   if (room) {
     const dock = layer.ownerDocument.querySelector('[data-sticker-dock]')?.getBoundingClientRect()
     // A room stays in its window's stacking context. Reserve the portion

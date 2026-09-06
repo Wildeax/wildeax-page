@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { act, render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { PlayableSurface } from '@/play/PlayableSurface'
 import { IDENTITY_TRANSFORM } from '@/play/types'
 
@@ -33,6 +33,28 @@ function givePage(
 }
 
 describe('PlayableSurface', () => {
+  it('blocks native scrolling only during a held touch drag and releases it on cancel', () => {
+    vi.useFakeTimers()
+    try {
+      const view = render(<PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={() => {}}><span>sticker</span></PlayableSurface>)
+      const el = view.container.firstElementChild as HTMLElement
+      const touchMove = () => {
+        const event = new Event('touchmove', { bubbles: true, cancelable: true })
+        Object.defineProperty(event, 'touches', { value: [{}] })
+        fireEvent(el, event)
+        return event.defaultPrevented
+      }
+      fireEvent.pointerDown(el, { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10 })
+      expect(touchMove()).toBe(false)
+      act(() => vi.advanceTimersByTime(300))
+      expect(touchMove()).toBe(true)
+      fireEvent.pointerCancel(el, { pointerId: 1 })
+      expect(touchMove()).toBe(false)
+      view.unmount()
+      expect(touchMove()).toBe(false)
+    } finally { vi.useRealTimers() }
+  })
+
   it.each([1, 2])('does not turn mouse button %i into a drag', (button) => {
     const onTransform = vi.fn()
     const { container } = render(<PlayableSurface caps={['move']} transform={IDENTITY_TRANSFORM} onTransform={onTransform}><span>sticker</span></PlayableSurface>)

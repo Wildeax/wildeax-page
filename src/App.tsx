@@ -5,31 +5,26 @@ import Aurora from '@/reactbits/Aurora'
 import { PlayRoot } from '@/play'
 import { StickerLayer } from '@/play/StickerLayer'
 import { Desktop } from '@/os/Desktop'
+import { useIsDesktop } from '@/os/useIsDesktop'
+import { useMediaQuery } from '@/os/useMediaQuery'
 
 // Split out so `three` (AsciiCanvasText, used only by NotFound) and
 // `react-icons` (used only by Links) leave the main chunk.
 const Links = lazy(() => import('@/pages/Links'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
-}
-
 function App() {
   const { pathname } = useLocation()
+  const isDesktop = useIsDesktop()
+  const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   return (
     <PlayRoot pathname={pathname}>
-      <div className="relative min-h-screen bg-[#0b0e12] text-zinc-200 antialiased">
+      <div className={`relative min-h-screen bg-[#0b0e12] text-zinc-200 antialiased ${isDesktop && pathname === '/' ? 'h-dvh overflow-clip' : ''}`}>
         {/* Wallpaper */}
         <div className="pointer-events-none fixed inset-0 z-0">
-          {prefersReducedMotion() ? (
-            // Aurora runs a WebGL animation loop. Under reduced motion it is
-            // replaced by a static gradient rather than left black.
-            <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(14,165,233,0.35),transparent),radial-gradient(60%_60%_at_80%_90%,rgba(124,58,237,0.3),transparent)]" />
+          {!isDesktop || reduced ? (
+            // Phones keep the colors without a continuous WebGL animation.
+            <div data-static-wallpaper className="absolute inset-0 bg-[radial-gradient(60%_60%_at_20%_10%,rgba(14,165,233,0.35),transparent),radial-gradient(60%_60%_at_80%_90%,rgba(124,58,237,0.3),transparent)]" />
           ) : (
             <div className="absolute inset-0 opacity-80">
               <Aurora colorStops={['#0ea5e9', '#7c3aed', '#0ea5e9']} amplitude={1.3} blend={0.7} />
