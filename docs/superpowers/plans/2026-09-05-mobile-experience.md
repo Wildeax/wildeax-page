@@ -79,3 +79,31 @@ The initial live main gate had one intermittent long-press/scroll failure.
 Four isolated repetitions passed without changing cat gesture code. Its
 test now waits for swipe inertia to end and remeasures the cat before the
 separate hold, instead of relying on a fixed 350 ms delay.
+
+## Preview verification
+
+Runtime commit: `781b2fe`. Worker version:
+`5ce57800-77ec-412e-8293-f2bc146672f4`.
+Preview: `https://5ce57800-wildeax-page.arena-riot-proxy.workers.dev`.
+
+- 217/217 unit tests pass with `--maxWorkers=1 --silent`.
+- Production build passes. Existing bundle-size and Browserslist-age warnings
+  remain; no runtime dependency was added.
+- Changed-file ESLint passes. Full ESLint remains at 19 pre-existing errors
+  and one warning in `src/i18n/index.tsx` and `src/reactbits/`.
+- All 178 browser checks pass: 50 mobile/isolation, 33 main desktop/mobile,
+  11 focused cat, 21 behavior, 26 handling/app visits, 17 stickers/tail,
+  20 yarn/selection. No browser runtime errors were reported.
+- The focused supporting-window test initially missed a fall. It now freezes
+  time during targeting, finds an exposed title-bar point, verifies the window
+  actually moves, and inspects the next physics frames. It passes without
+  changing the cat's desktop physics.
+- Preview screenshots were inspected at portrait, narrow, landscape and
+  tablet sizes. Physical iOS/Android hardware was not available.
+
+PR: `https://github.com/Wildeax/wildeax-page/pull/2`.
+There are no GitHub Actions workflows. The external Cloudflare Workers Builds
+check is failing on both `5a35ff9` (prior main) and this branch. Its logs are
+not accessible with the existing OAuth permission (HTTP 403), so the cause
+is unknown. The manually built/uploaded version above is the tested release;
+hosted CI is not claimed green. No credentials or build automation were changed.

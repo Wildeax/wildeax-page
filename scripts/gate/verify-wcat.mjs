@@ -17,17 +17,33 @@ try {
     const el = document.querySelector('[data-wcat]')
     return el?.dataset.form === 'cat' && el.dataset.ground && el.dataset.ground !== 'floor'
   }, null, { timeout: 15000 })
+  // Freeze only time while targeting the current perch. Otherwise the pet can
+  // leave during a screenshot, and a fast fall can land between observations.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 16))
   const platform = await page.locator('[data-wcat]').getAttribute('data-ground')
   await page.screenshot({ path: 'shot-wcat-perched.png' })
   checks.push(['wcat autonomously jumps onto a window', !!platform])
   const handle = page.locator(`[data-window="${platform}"] [data-drag-handle]`)
   const rect = await handle.boundingBox()
-  await page.mouse.move(rect.x + 20, rect.y + 15)
+  const point = await handle.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    for (let x = r.left + 12; x < r.right - 65; x += 24) {
+      const top = document.elementFromPoint(x, r.top + 15)
+      if (top?.closest('[data-drag-handle]') === el && !top.closest('button')) return { x, y: r.top + 15 }
+    }
+    return null
+  })
+  if (!point) throw new Error(`No exposed drag handle for the ${platform} perch`)
+  await page.mouse.move(point.x, point.y)
   await page.mouse.down()
-  const falling = page.waitForFunction(() => document.querySelector('[data-wcat]')?.dataset.mode === 'fall', null, { timeout: 5000 }).then(() => true, () => false)
-  await page.mouse.move(rect.x + 100, rect.y + 55, { steps: 10 })
+  await page.mouse.move(point.x + 80, point.y + 40, { steps: 10 })
+  await page.clock.runFor(32)
+  const moved = (await handle.boundingBox()).y - rect.y
+  const falling = await page.locator('[data-wcat]').getAttribute('data-mode') === 'fall'
   await page.mouse.up()
-  checks.push(['moving the supporting window makes wcat fall', await falling])
+  await page.clock.resume()
+  if (!falling || moved < 30) console.log('support-removal diagnostics', { platform, point, moved, falling, cat: await page.locator('[data-wcat]').getAttribute('data-mode') })
+  checks.push(['moving the supporting window makes wcat fall', falling && moved > 30])
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   mobile.on('pageerror', (e) => errors.push(e.message))
   await mobile.goto(url, { waitUntil: 'networkidle' })
