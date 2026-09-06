@@ -2,7 +2,7 @@ import { CAT_SIZE, GRAVITY, clamp, support } from './physics'
 import type { Body, Platform, World } from './physics'
 import type { Signals } from './senses'
 
-export type Mode = 'sit' | 'walk' | 'jump' | 'nap' | 'fall' | 'ball' | 'stalk' | 'crouch' | 'pounce' | 'pet' | 'poke'
+export type Mode = 'sit' | 'walk' | 'jump' | 'nap' | 'wake' | 'fall' | 'ball' | 'stalk' | 'crouch' | 'pounce' | 'pet' | 'poke'
 export interface Brain {
   mode: Mode
   until: number
@@ -13,19 +13,20 @@ export interface Brain {
   lookAfter: number
   lookUntil: number
   target: { x: number; y: number }
+  wakeTo: 'sit' | 'pet' | 'poke'
 }
 export interface Pointer { x: number; y: number; movedAt: number; inside: boolean }
 export interface Input { now: number; world: World; pointer: Pointer; mobile: boolean; random: () => number; signals?: Signals }
 
 export function createBrain(now: number, random: () => number): Brain {
   return { mode: 'sit', until: now + 2 + random() * 6, facing: 1, awakeAt: now,
-    reactedAt: now - 0.001, huntAfter: now, lookAfter: now, lookUntil: 0, target: { x: 0, y: 0 } }
+    reactedAt: now - 0.001, huntAfter: now, lookAfter: now, lookUntil: 0, target: { x: 0, y: 0 }, wakeTo: 'sit' }
 }
 
 // Ordinary glances look at a remembered spot, not a live cursor. Sleeping,
 // petting and rolling always use a neutral face, including between RAF ticks.
 export function gaze(brain: Brain, body: Body, now: number, reduced = false): { x: number; y: number } {
-  if (reduced || body.form === 'ball' || ['nap', 'pet', 'poke'].includes(brain.mode) || now >= brain.lookUntil) return { x: 0, y: 0 }
+  if (reduced || body.form === 'ball' || ['nap', 'wake', 'pet', 'poke'].includes(brain.mode) || now >= brain.lookUntil) return { x: 0, y: 0 }
   return { x: clamp((brain.target.x - body.x) / 70, -2, 2), y: clamp((brain.target.y - (body.y - 28)) / 70, -2, 2) }
 }
 
@@ -36,6 +37,14 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
   const sit = () => {
     brain.mode = 'sit'
     brain.until = now + 2 + random() * 6
+    body.vx = 0
+  }
+  const wake = (to: Brain['wakeTo']) => {
+    brain.mode = 'wake'
+    brain.wakeTo = to
+    brain.until = now + 0.65
+    brain.awakeAt = now
+    brain.lookUntil = 0
     body.vx = 0
   }
   const done = () => ({ brain, body })
@@ -53,25 +62,38 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     brain.reactedAt = affectionAt
     brain.awakeAt = now
     // Repeated clicks during a startle do not restart its animation forever.
-    if (brain.mode !== 'poke' || now >= brain.until) {
-      brain.mode = pokedAt >= pettedAt ? 'poke' : 'pet'
+    const reaction = pokedAt >= pettedAt ? 'poke' : 'pet'
+    if (brain.mode === 'nap') wake(reaction)
+    else if (brain.mode === 'wake') brain.wakeTo = reaction
+    else if (brain.mode !== 'poke' || now >= brain.until) {
+      brain.mode = reaction
       brain.until = now + (brain.mode === 'poke' ? 0.65 : 1.4)
     }
     brain.lookUntil = 0
     brain.huntAfter = now + 5
     body.vx = 0
   }
+  if (brain.mode === 'wake') {
+    if (now >= brain.until) {
+      if (brain.wakeTo === 'sit') sit()
+      else {
+        brain.mode = brain.wakeTo
+        brain.until = now + (brain.mode === 'poke' ? 0.65 : 1.4)
+      }
+    }
+    body.vx = 0
+    return done()
+  }
   if (brain.mode === 'pet' || brain.mode === 'poke') {
     if (now >= brain.until) sit()
     body.vx = 0
     return done()
   }
-  if (mobile || world.reducedMotion) { if (brain.mode !== 'sit') sit(); body.vx = 0; return done() }
   if (['jump', 'fall', 'ball', 'pounce'].includes(brain.mode)) { sit(); return done() }
 
   const distance = Math.hypot(pointer.x - body.x, pointer.y - body.y)
   if (brain.mode === 'nap') {
-    if (pointer.inside && distance < 110 && now - pointer.movedAt < 0.15) { brain.awakeAt = now; sit() }
+    if (pointer.inside && distance < 110 && now - pointer.movedAt < 0.15) wake('sit')
     return done()
   }
   if (now - Math.max(pointer.movedAt, brain.awakeAt) >= 45) {
@@ -80,6 +102,10 @@ export function think(previous: Brain, current: Body, input: Input): { brain: Br
     body.vx = 0
     return done()
   }
+
+  // Sleeping is stationary, so phones and reduced-motion visitors can nap
+  // too. Their restrictions apply to roaming, gaze and hunting below.
+  if (mobile || world.reducedMotion) { if (brain.mode !== 'sit') sit(); body.vx = 0; brain.lookUntil = 0; return done() }
 
   const toyReachable = pointer.inside && distance <= 240 && Math.abs(pointer.y - body.y) <= 100
     && pointer.x >= surface.left + CAT_SIZE / 2 && pointer.x <= surface.right - CAT_SIZE / 2

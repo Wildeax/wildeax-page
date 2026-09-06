@@ -37,6 +37,33 @@ describe('wcat interaction', () => {
     expect(cat().style.getPropertyValue('--wcat-eye-y')).toBe('0px')
   })
 
+  it('shows sleep marks and takes a drowsy moment before reacting to a wake-up poke', () => {
+    render(<Wcat label="wcat" />)
+    act(() => vi.advanceTimersByTime(46000))
+    expect(cat().dataset.mode).toBe('nap')
+    expect(cat().querySelector('.wcat-sleep')?.textContent).toBe('zZZ')
+    expect(cat().querySelector('.wcat-sleep')?.getAttribute('aria-hidden')).toBe('true')
+    fireEvent.click(cat(), { detail: 0 })
+    expect(cat().dataset.mode).toBe('wake')
+    act(() => vi.advanceTimersByTime(400))
+    expect(cat().dataset.mode).toBe('wake')
+    expect(cat().style.getPropertyValue('--wcat-eye-x')).toBe('0px')
+    act(() => vi.advanceTimersByTime(300))
+    expect(cat().dataset.mode).toBe('poke')
+    act(() => vi.advanceTimersByTime(700))
+    expect(cat().dataset.mode).toBe('sit')
+  })
+
+  it('puts sleep marks on the inward side at the right viewport edge', () => {
+    render(<Wcat mobile label="wcat" />)
+    fireEvent.keyDown(cat(), { key: ' ' })
+    for (let i = 0; i < 15; i++) fireEvent.keyDown(cat(), { key: 'ArrowRight', shiftKey: true })
+    fireEvent.keyDown(cat(), { key: 'Escape' })
+    act(() => vi.advanceTimersByTime(46000))
+    expect(cat().dataset.mode).toBe('nap')
+    expect(cat().dataset.sleepSide).toBe('left')
+  })
+
   it.each(['mouse', 'touch'])('pokes on a %s click or tap without lifting', (type) => {
     render(<Wcat label="wcat" mobile={type === 'touch'} />)
     press(type)

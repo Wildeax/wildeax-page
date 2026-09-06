@@ -56,6 +56,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
       el.dataset.blink = String(!reduced && now < blinkUntil)
       el.dataset.squash = String(!reduced && now < squashUntil)
       el.dataset.ground = body.ground ?? ''
+      el.dataset.sleepSide = body.x > world.width - 100 ? 'left' : 'right'
       el.style.visibility = 'visible'
       const key = `${body.form}:${brain.mode}:${held()}`
       if (painted !== key) {
@@ -281,6 +282,7 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
           <span className="wcat-silhouette"><span className="wcat-tail" /><span className="wcat-ear wcat-ear-left" /><span className="wcat-ear wcat-ear-right" /></span>
           <span className="wcat-face"><span className="wcat-eyes"><span /><span /></span><span className="wcat-mouth" /></span>
         </span>
+        <span className="wcat-sleep" aria-hidden="true"><span>z</span><span>Z</span><span>Z</span></span>
       </button>
     </div>
   )

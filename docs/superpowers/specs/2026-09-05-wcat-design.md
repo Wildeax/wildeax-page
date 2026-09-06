@@ -5,7 +5,8 @@ presented design with "Go" on 2026-09-05. Work is on `feat/wcat`.
 The missing body reference remains an art-review limitation. The first
 reviewable version uses the rounded silhouette described below.
 
-The owner's preview feedback added petting, poking and toy-like hunting.
+The owner's preview feedback added petting, poking, toy-like hunting,
+half-open waking eyes and floating sleep marks.
 The behavior below includes that refinement. Its tests and review record are
 in `../plans/2026-09-05-wcat-behavior.md`.
 
@@ -75,6 +76,11 @@ with 4 to 9 seconds between opportunities. Sleeping and petting eyes stay
 closed and centered. Facing flips with `scaleX(-1)` on the body only, never
 the face container, so the mouth stays symmetric.
 
+Sleep has a small staggered `zZZ` animation beside the head. The marks face
+inward near the right viewport edge. Waking holds the eyes 45% open for
+650 ms before sitting or reacting to a poke/pet. Lifting still happens
+immediately. Reduced motion keeps the sleep marks visible but still.
+
 Ball form: a 36 px black circle, ears and tail hidden, face kept and rotated
 by distance rolled divided by radius. Morph is a 150 ms transition on width,
 height and border-radius.
@@ -109,7 +115,8 @@ over the head pet. Dragging still uses the same thresholds.
 | pounce | after crouching | short arc toward the last target on the same ledge or floor | landing → sit; 8 to 13 s cooldown from hunt start |
 | pet | gentle unpressed head stroke, at least 24 px over 120 ms | stop, lean, close and center eyes | 1.4 s without strokes → sit |
 | poke | click, tap or Enter | stop, brief startle and ear flick | 650 ms → sit |
-| nap | 45 s without pointer movement or affection | eyes closed and still, body 10% flatter | fresh movement within 110 px → sit; poke/pet → corresponding reaction; lift → ball |
+| nap | 45 s without pointer movement or affection | eyes closed and still, body 10% flatter, rising zZZ | fresh movement within 110 px or poke/pet → wake; lift → ball |
+| wake | waking from a nap | eyes half-open and still, body 5% flatter, sleep marks hidden | 650 ms → sit or the requested poke/pet reaction |
 | fall | the surface under the feet is gone (window closed, minimized or moved) | gravity, land on the first platform below or the floor, squash 120 ms | landing → sit |
 
 Implementation correction: floor jumps may reach the lowest nearby window
@@ -130,14 +137,14 @@ is capped by the ceiling. An isolated cat walks off an edge before falling.
   by dt). The ball ignores windows.
 - Rest: speed under 40 px/s while on the floor for 300 ms → unroll into cat
   form → sit.
-- `prefers-reduced-motion`: no roam, hunting or nap. Petting/poking retain
-  static expression feedback with no animation. Drag still works. Release
+- `prefers-reduced-motion`: no roam or hunting. Sleep marks and pet/poke
+  feedback are still, without animation. Drag still works. Release
   drops straight down with no bounce and lands as a cat.
 
 ## Phones
 
 Same component. Floor at the viewport bottom minus 8 px, no platforms, brain
-restricted to sit and affection reactions. Tap to poke, long-press to lift
+restricted to sit, sleep/wake and affection reactions. Tap to poke, long-press to lift
 so a normal swipe still scrolls. The ball bounces off the viewport edges like
 on desktop. Touch movement does not trigger mouse-style petting or hunting.
 

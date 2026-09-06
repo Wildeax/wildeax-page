@@ -31,7 +31,11 @@ describe('wcat brain', () => {
     const nap = think(createBrain(0, random), createBody(world), input(46))
     expect(nap.brain.mode).toBe('nap')
     const wake = think(nap.brain, nap.body, input(47, { pointer: { x: nap.body.x, y: nap.body.y, inside: true, movedAt: 47 } }))
-    expect(wake.brain.mode).toBe('sit')
+    expect(wake.brain.mode).toBe('wake')
+    expect(gaze(wake.brain, wake.body, 47)).toEqual({ x: 0, y: 0 })
+    const wakingInput = { pointer: { x: wake.body.x, y: wake.body.y, inside: true, movedAt: 47 } }
+    expect(think(wake.brain, wake.body, input(47.4, wakingInput)).brain.mode).toBe('wake')
+    expect(think(wake.brain, wake.body, input(47.7, wakingInput)).brain.mode).toBe('sit')
   })
 
   it('ignores a parked pointer instead of following it', () => {
@@ -102,10 +106,11 @@ describe('wcat brain', () => {
     expect(body.ground).toBe('window')
   })
 
-  it.each(['mobile', 'reduced'])('stays seated with %s motion restrictions', (kind) => {
+  it.each(['mobile', 'reduced'])('stays still and can nap with %s motion restrictions', (kind) => {
     const args = input(60, { mobile: kind === 'mobile', world: { ...world, reducedMotion: kind === 'reduced' } })
     const result = think(createBrain(0, random), createBody(world), args)
-    expect(result.brain.mode).toBe('sit')
+    expect(think(createBrain(0, random), createBody(world), { ...args, now: 10 }).brain.mode).toBe('sit')
+    expect(result.brain.mode).toBe('nap')
     expect(result.body.vx).toBe(0)
   })
 
@@ -155,10 +160,21 @@ describe('wcat brain', () => {
     const sleeping = think(createBrain(0, random), createBody(world), input(46))
     for (const signals of [{ pokedAt: 47 }, { pettedAt: 47 }]) {
       const awake = think(sleeping.brain, sleeping.body, input(47, { signals }))
-      expect(['poke', 'pet']).toContain(awake.brain.mode)
-      const resting = think(awake.brain, awake.body, input(49, { signals }))
+      expect(awake.brain.mode).toBe('wake')
+      const reaction = think(awake.brain, awake.body, input(47.7, { signals }))
+      expect(['poke', 'pet']).toContain(reaction.brain.mode)
+      const resting = think(reaction.brain, reaction.body, input(50, { signals }))
       expect(resting.brain.mode).toBe('sit')
-      expect(think(resting.brain, resting.body, input(49.1, { signals })).brain.mode).toBe('sit')
+      expect(think(resting.brain, resting.body, input(50.1, { signals })).brain.mode).toBe('sit')
     }
+  })
+
+  it('does not prolong waking forever when head strokes continue', () => {
+    const sleeping = think(createBrain(0, random), createBody(world), input(46))
+    const waking = think(sleeping.brain, sleeping.body, input(47, { signals: { pettedAt: 47 } }))
+    const more = think(waking.brain, waking.body, input(47.4, { signals: { pettedAt: 47.4 } }))
+    expect(more.brain.mode).toBe('wake')
+    expect(more.brain.until).toBe(waking.brain.until)
+    expect(think(more.brain, more.body, input(47.7, { signals: { pettedAt: 47.7 } })).brain.mode).toBe('pet')
   })
 })

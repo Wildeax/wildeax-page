@@ -17,6 +17,10 @@ Continue on `feat/wcat`. No production deployment is authorized.
   keyboard lifting. Enter pokes; Space lifts or drops. Reduced motion retains
   static expression feedback without roaming, hunting or reaction animations.
 - No new dependency, storage, shared state, or generated art.
+- Follow-up request: hold half-open eyes for 650 ms when waking, then sit or
+  react to the poke/pet that woke it. Add staggered rising `zZZ` marks while
+  sleeping, hidden when awake and turned inward near the right edge.
+  Phones can nap on the floor too; reduced motion keeps sleep marks still.
 
 ## Checks
 
@@ -32,8 +36,11 @@ Upload a version preview, run gates against it, and update the existing PR.
   instead of `0px`. Mouse/touch poke and head-stroke tests also failed.
 - Behavior tests first observed the old `follow` state under a parked cursor
   and the absence of affection and hunting states.
-- All 159 tests across 17 files pass with one worker. The build passes,
-  including TypeScript. Main JS is 602.68 KB, 193.94 KB gzip; CSS is 36.42 KB.
+- All 162 tests across 17 files pass with one worker. Sleep follow-up tests
+  first failed on instant waking, absent sleep marks and missing inward
+  placement at the right edge, then passed after implementation.
+- The sleep-follow-up build passes, including TypeScript. Main JS is
+  603.19 KB, 194.04 KB gzip; CSS is 37.64 KB.
 - Changed TypeScript files pass ESLint. Full lint still reports the same
   19 errors and one warning in `src/i18n/index.tsx` and `src/reactbits/`.
 - Local built preview passed 33 main browser checks, 11 existing focused
@@ -41,4 +48,10 @@ Upload a version preview, run gates against it, and update the existing PR.
   long-press dragging still prevents scrolling and settles back into a cat.
 - Inspected cropped browser screenshots of sleeping, petting, crouching
   and pouncing. The cat stays under the sticker dock during jumps.
+- The sleep follow-up screenshots show rising marks and half-open waking
+  eyes. Its local browser checks include actual half-open eye height,
+  static marks under reduced motion, and inward-facing marks on phones.
+- Before the sleep follow-up, a ten-window callback profile measured
+  65 frames, mean 0.36 ms, p95 0.50 ms, max 0.70 ms. These are callback
+  measurements, not page FPS or total rendering times.
 - Uploaded-preview verification pending.

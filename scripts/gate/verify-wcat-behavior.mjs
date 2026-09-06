@@ -61,10 +61,21 @@ try {
   const asleepEyes = await eyes(page)
   check('sleeping eyes remain closed and still after distant mouse movement', sleeping === 'nap'
     && await mode(page) === 'nap' && asleepEyes.x === '0px' && asleepEyes.y === '0px' && asleepEyes.height < 2, asleepEyes)
+  const sleepMarks = await cat(page).locator('.wcat-sleep').evaluate((el) => ({ text: el.textContent,
+    visibility: getComputedStyle(el).visibility, animation: getComputedStyle(el.firstElementChild).animationName }))
+  check('sleep has visible animated zZZ marks', sleepMarks.text === 'zZZ' && sleepMarks.visibility === 'visible'
+    && sleepMarks.animation === 'wcat-sleep', sleepMarks)
+  await page.clock.runFor(800)
   await shot(page, 'sleep')
 
   let r = await cat(page).boundingBox()
   await page.mouse.click(r.x + 22, r.y + 22)
+  const wakingEyes = await eyes(page)
+  check('waking starts with still, half-open eyes', await mode(page) === 'wake' && wakingEyes.x === '0px'
+    && wakingEyes.y === '0px' && wakingEyes.height > 3 && wakingEyes.height < 6, wakingEyes)
+  await shot(page, 'wake')
+  check('sleep marks disappear during waking', await cat(page).locator('.wcat-sleep').evaluate((el) => getComputedStyle(el).visibility === 'hidden'))
+  await page.clock.runFor(700)
   check('a click wakes and pokes without lifting', await mode(page) === 'poke' && await cat(page).getAttribute('data-form') === 'cat')
   await shot(page, 'poke')
   await page.clock.runFor(800)
@@ -111,12 +122,31 @@ try {
   await cat(reduced).focus()
   await reduced.keyboard.press('Enter')
   check('Enter pokes without lifting', await mode(reduced) === 'poke' && await cat(reduced).getAttribute('data-form') === 'cat')
+  await reduced.clock.fastForward(46000)
+  await reduced.clock.runFor(32)
+  const staticMarks = await cat(reduced).locator('.wcat-sleep > span').first().evaluate((el) => ({
+    animation: getComputedStyle(el).animationName, opacity: getComputedStyle(el).opacity,
+  }))
+  check('reduced motion allows sleep with still zZZ marks', await mode(reduced) === 'nap'
+    && staticMarks.animation === 'none' && Number(staticMarks.opacity) > 0, staticMarks)
   await reduced.close()
 
   const mobile = await open({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
   r = await cat(mobile).boundingBox()
   await mobile.touchscreen.tap(r.x + 22, r.y + 22)
   check('a phone tap pokes without a long-press lift', await mode(mobile) === 'poke' && await cat(mobile).getAttribute('data-form') === 'cat')
+  await cat(mobile).focus()
+  await mobile.keyboard.press('Space')
+  for (let i = 0; i < 8; i++) await mobile.keyboard.press('Shift+ArrowRight')
+  await mobile.keyboard.press('Escape')
+  await mobile.clock.runFor(1000)
+  await mobile.clock.fastForward(46000)
+  await mobile.clock.runFor(32)
+  const markBounds = await cat(mobile).locator('.wcat-sleep').boundingBox()
+  check('phone sleep marks face inward and do not widen the viewport', await mode(mobile) === 'nap'
+    && await cat(mobile).getAttribute('data-sleep-side') === 'left' && markBounds.x >= 0 && markBounds.x + markBounds.width <= 390
+    && await mobile.evaluate(() => document.documentElement.scrollWidth === innerWidth), markBounds)
+  await shot(mobile, 'mobile-sleep')
   await mobile.close()
   check('no page errors', errors.length === 0, errors)
   process.exitCode = checks.every(([, passed]) => passed) ? 0 : 1
