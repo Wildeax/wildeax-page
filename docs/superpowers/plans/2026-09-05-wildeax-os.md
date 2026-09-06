@@ -527,7 +527,7 @@ existing keys for now; Task 9 prunes the dead ones.
     'os.project.collab.stack': 'TypeScript, CRDT sync, Obsidian plugin API',
 
     'os.project.pos.name': 'Pharmacy POS and ERP',
-    'os.project.pos.desc': 'Replacing a legacy .NET point of sale and ERP, working from decompiled source and a map of the processes it runs.',
+    'os.project.pos.desc': 'Replacing a legacy .NET point of sale and ERP for a pharmacy business, rebuilt around how the counter and the back office actually work.',
     'os.project.pos.stack': 'Java backend, two TypeScript frontends, Tauri desktop, shared design system',
 
     'os.taskbar.start': 'Start',
@@ -593,7 +593,7 @@ stay in English because a filename is not prose.
     'os.project.collab.stack': 'TypeScript, sincronización CRDT, API de plugins de Obsidian',
 
     'os.project.pos.name': 'POS y ERP de farmacia',
-    'os.project.pos.desc': 'Reemplazo de un punto de venta y ERP heredado en .NET, partiendo del código decompilado y de un mapa de sus procesos.',
+    'os.project.pos.desc': 'Reemplazo de un punto de venta y ERP heredado en .NET para una farmacia, reconstruido alrededor de cómo trabajan realmente el mostrador y la oficina.',
     'os.project.pos.stack': 'Backend en Java, dos frontends en TypeScript, escritorio con Tauri, sistema de diseño compartido',
 
     'os.taskbar.start': 'Inicio',

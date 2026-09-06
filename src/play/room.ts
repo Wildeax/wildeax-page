@@ -9,7 +9,7 @@
  * their own instead of rearranging the live desktop, and so the author can look
  * at a clean desktop without resetting everyone's.
  */
-const DEFAULT_ROOM = 'wildeax-1'
+const DEFAULT_ROOM = 'wildeax-2'
 
 function roomFromQuery(): string | null {
   if (typeof window === 'undefined') return null
