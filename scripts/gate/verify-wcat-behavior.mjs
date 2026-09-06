@@ -146,6 +146,7 @@ try {
   check('phone sleep marks face inward and do not widen the viewport', await mode(mobile) === 'nap'
     && await cat(mobile).getAttribute('data-sleep-side') === 'left' && markBounds.x >= 0 && markBounds.x + markBounds.width <= 390
     && await mobile.evaluate(() => document.documentElement.scrollWidth === innerWidth), markBounds)
+  await mobile.clock.runFor(800)
   await shot(mobile, 'mobile-sleep')
   await mobile.close()
   check('no page errors', errors.length === 0, errors)

@@ -54,4 +54,11 @@ Upload a version preview, run gates against it, and update the existing PR.
 - Before the sleep follow-up, a ten-window callback profile measured
   65 frames, mean 0.36 ms, p95 0.50 ms, max 0.70 ms. These are callback
   measurements, not page FPS or total rendering times.
-- Uploaded-preview verification pending.
+- Hosted preview `9c6e43b1-2a4f-4f5e-925a-ade8aaa76a2f`, runtime commit
+  `8ba3236`, passed all 65 browser checks: 33 main, 11 focused interactions,
+  and 21 behavior/sleep checks. The expanded behavior gate also passed locally.
+- Production remains 100% on `fa2be86e-6184-46c9-9a7b-9fb03b4f8b46`,
+  verified with the deployment list after uploading the preview. No production
+  deployment occurred. The existing PR is `Wildeax/wildeax-page#1`.
+- No GitHub Actions workflows are configured, checked again through the API.
+  Browser tests use Chromium touch emulation, not a physical phone.
