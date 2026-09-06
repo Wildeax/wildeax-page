@@ -1,7 +1,7 @@
 # Hand-off: wildeax.com (WILDEAX OS)
 
-Updated 2026-09-06 after publishing wcat and testing the mobile/sticker
-follow-up. Read this first. It says what exists, where it is, how to
+Updated 2026-09-06 after publishing wcat and the mobile/sticker fixes.
+Read this first. It says what exists, where it is, how to
 check it, and what is pending.
 
 ## What this is
@@ -24,7 +24,7 @@ never appear anywhere public.
 |---|---|
 | Repo | `D:\Projects\Wildeax\Porfolio\Webpage\wildeax-page`, remote `github.com/Wildeax/wildeax-page`, branch `main` |
 | Production | Cloudflare Worker `wildeax-page`, served at `https://www.wildeax.com`. Apex 301s to www through an account-level Bulk Redirect list |
-| Production version | Worker version `33cf49c7-80ee-4075-a28c-febf253eb7b4`, wcat release merged via PR #1 at `5a35ff9` |
+| Production version | Worker version `5ce57800-77ec-412e-8293-f2bc146672f4`, 100% traffic. Runtime commit `781b2fe`, merged via PR #2 at `28a0e2d` |
 | Mobile/sticker preview | Version `5ce57800-77ec-412e-8293-f2bc146672f4`, runtime code from `781b2fe`. Use `https://5ce57800-wildeax-page.arena-riot-proxy.workers.dev/?room=mobile-review-5ce57800` |
 | Shared room | `wildeax-2` in `src/play/room.ts`. Bump `DEFAULT_ROOM` to reset every visitor's positions |
 | Desktop code | `src/os/` (Desktop, Window, Taskbar, DesktopIcon, registry, windowState, marquee) |
@@ -135,7 +135,14 @@ Cloudflare build dashboard before changing that automation or credentials.
 
 ## Mobile/sticker follow-up
 
-The tested preview keeps desktop placements in `wildeax-stickers` and uses
+Published at 2026-09-06 05:06 UTC. The exact tested preview was promoted to
+100% production traffic. All 178 preview browser checks passed; all 50
+mobile/isolation checks passed again on www after deployment. The live
+response returned HTTP 200 and bundle `index-9evkaNL8.js`. A read-only check
+of the default shared room found its two stickers intact, a 1365×711 page
+in a 1365×711 viewport, zero scroll and no browser runtime errors.
+
+The release keeps desktop placements in `wildeax-stickers` and uses
 `wildeax-stickers-mobile` for mobile. No collections are reset or deleted.
 Both layers clip remote out-of-bounds data, and the desktop home page cannot
 scroll. Phones have content-height cards, working section/project links,

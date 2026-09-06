@@ -107,3 +107,19 @@ check is failing on both `5a35ff9` (prior main) and this branch. Its logs are
 not accessible with the existing OAuth permission (HTTP 403), so the cause
 is unknown. The manually built/uploaded version above is the tested release;
 hosted CI is not claimed green. No credentials or build automation were changed.
+
+## Production release
+
+PR #2 merged at `28a0e2d`. At 2026-09-06 05:06 UTC, the exact tested Worker
+`5ce57800-77ec-412e-8293-f2bc146672f4` was promoted to 100% traffic with the
+owner's explicit permission. `wrangler deployments list` confirms it.
+
+The live response returned HTTP 200 with `index-9evkaNL8.js`. The complete
+50-check mobile/isolation gate passed again on `https://www.wildeax.com`,
+using a fresh room. A separate read-only visit to the actual default room
+found two existing stickers, a 1365×711 document matching its viewport,
+`scrollY = 0`, and no page errors. No default-room data was mutated by QA.
+
+The repository is on main. Production rollout is complete; the remaining
+items are existing lint/hosted-build issues and physical-phone/Safari QA,
+not unshipped feature work.
