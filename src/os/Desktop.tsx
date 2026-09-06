@@ -45,11 +45,12 @@ function prefersReducedMotion(): boolean {
 
 /**
  * Offset from a window's centre to its taskbar button's centre. Measured on
- * the wrapper rather than the dialog, because the wrapper keeps its size while
- * the dialog inside is hidden, which is exactly when a restore needs it.
+ * the box inside the drag transform, so it reflects where the window actually
+ * is after being dragged, and the box keeps its explicit size while the dialog
+ * inside is hidden, which is exactly when a restore needs it.
  */
 function dockOffset(id: WindowId): { dx: number; dy: number } {
-  const win = document.querySelector(`[data-win-wrapper="${id}"]`)?.getBoundingClientRect()
+  const win = document.querySelector(`[data-win-box="${id}"]`)?.getBoundingClientRect()
   const task = document.querySelector(`[data-task="${id}"]`)?.getBoundingClientRect()
   if (!win || !task) return { dx: 0, dy: window.innerHeight }
   return {
@@ -201,33 +202,41 @@ export function Desktop() {
       {WINDOWS.map((w) => {
         const shown = isVisible(state, w.id)
         const inFlight = flights[w.id]
-        // z-index lives here, on the wrapper OUTSIDE PlayableSurface. The
-        // surface always has a transform, which is its own stacking context,
-        // so a z-index inside it can never order one window over another.
-        // The flight animation lives here too, for the same reason.
         const anchor = placeWithinViewport(w)
-        const style: CSSProperties & Record<`--${string}`, string> = {
+        // z-index lives on the wrapper, OUTSIDE PlayableSurface. The surface
+        // always has a transform, which is its own stacking context, so a
+        // z-index inside it can never order one window over another.
+        const wrapperStyle: CSSProperties = {
           left: anchor.left,
           top: anchor.top,
           zIndex: shown ? zIndexOf(state, w.id) : undefined,
-          // visibility rather than display: the sizing div inside keeps its
-          // explicit width and height, so dockOffset can still measure where a
-          // restore flight starts, while nothing paints and nothing intercepts
-          // a pointer meant for the wallpaper behind it.
+          // visibility rather than display: the box inside keeps its explicit
+          // width and height, so dockOffset can still measure where a restore
+          // flight starts, while nothing paints and nothing intercepts a
+          // pointer meant for the wallpaper behind it.
           visibility: shown ? undefined : 'hidden',
+        }
+        // The flight animates the box INSIDE the surface's drag transform, not
+        // the wrapper. Once a window has been dragged, the wrapper's border box
+        // is still at the authored anchor while the visible window sits at the
+        // drag offset. clip-path and transform-origin on the wrapper then cut
+        // and scale against the wrong rectangle: a window dragged far enough
+        // was clipped to nothing on the first frame and simply vanished.
+        const boxStyle: CSSProperties & Record<`--${string}`, string> = {
+          width: w.width,
+          height: w.height,
           '--dock-dx': `${inFlight?.dx ?? 0}px`,
           '--dock-dy': `${inFlight?.dy ?? 0}px`,
         }
         return (
-          <div
-            key={w.id}
-            data-win-wrapper={w.id}
-            className={`absolute ${inFlight ? `os-flight-${inFlight.kind}` : ''}`}
-            style={style}
-            onAnimationEnd={onFlightEnd(w.id)}
-          >
+          <div key={w.id} data-win-wrapper={w.id} className="absolute" style={wrapperStyle}>
             <Playable id={`win-${w.id}`} caps={['move']}>
-              <div style={{ width: w.width, height: w.height }}>
+              <div
+                data-win-box={w.id}
+                className={inFlight ? `os-flight-${inFlight.kind}` : undefined}
+                style={boxStyle}
+                onAnimationEnd={onFlightEnd(w.id)}
+              >
                 <Window
                   id={w.id}
                   title={t(w.titleKey)}

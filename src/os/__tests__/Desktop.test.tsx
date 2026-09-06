@@ -113,22 +113,26 @@ describe('Desktop at desktop widths', () => {
       </I18nProvider>,
     )
     const dialog = (id: string) => document.querySelector(`[data-window="${id}"]`) as HTMLElement
-    const wrapper = (id: string) => document.querySelector(`[data-win-wrapper="${id}"]`) as HTMLElement
+    // The flight lives on the box inside the drag transform, never the wrapper.
+    // On the wrapper, clip-path clipped against the authored anchor rectangle
+    // and a dragged window vanished on frame one.
+    const box = (id: string) => document.querySelector(`[data-win-box="${id}"]`) as HTMLElement
     const minimizeButton = (id: string) =>
       dialog(id).querySelector('button[aria-label^="Minimize"]') as HTMLButtonElement
 
     fireEvent.click(minimizeButton('readme'))
     // Still drawn while the flight plays; the reducer has not been told yet.
     expect(dialog('readme').hasAttribute('hidden')).toBe(false)
-    expect(wrapper('readme').className).toContain('os-flight-minimize')
+    expect(box('readme').className).toContain('os-flight-minimize')
+    expect(document.querySelector('[data-win-wrapper="readme"]')?.className).not.toContain('os-flight')
 
     // A second flight on another window must not cancel the first.
     fireEvent.click(minimizeButton('work'))
-    expect(wrapper('readme').className).toContain('os-flight-minimize')
-    expect(wrapper('work').className).toContain('os-flight-minimize')
+    expect(box('readme').className).toContain('os-flight-minimize')
+    expect(box('work').className).toContain('os-flight-minimize')
 
-    fireEvent.animationEnd(wrapper('readme'))
-    fireEvent.animationEnd(wrapper('work'))
+    fireEvent.animationEnd(box('readme'))
+    fireEvent.animationEnd(box('work'))
     expect(dialog('readme').hasAttribute('hidden')).toBe(true)
     expect(dialog('work').hasAttribute('hidden')).toBe(true)
     // Both keep their taskbar entries, marked minimized.
@@ -146,7 +150,7 @@ describe('Desktop at desktop widths', () => {
     const me = document.querySelector('[data-window="me"]') as HTMLElement
     fireEvent.click(me.querySelector('button[aria-label^="Close"]')!)
     expect(document.querySelector('[data-task="me"]')).not.toBeNull()
-    fireEvent.animationEnd(document.querySelector('[data-win-wrapper="me"]')!)
+    fireEvent.animationEnd(document.querySelector('[data-win-box="me"]')!)
     expect(me.hasAttribute('hidden')).toBe(true)
     expect(document.querySelector('[data-task="me"]')).toBeNull()
   })
