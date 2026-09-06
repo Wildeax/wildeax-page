@@ -25,7 +25,7 @@ never appear anywhere public.
 | Repo | `D:\Projects\Wildeax\Porfolio\Webpage\wildeax-page`, remote `github.com/Wildeax/wildeax-page`, branch `main` |
 | Production | Cloudflare Worker `wildeax-page`, served at `https://www.wildeax.com`. Apex 301s to www through an account-level Bulk Redirect list |
 | Production version | Worker version `fa2be86e`, built from `main` at `c94a18d` |
-| wcat review preview | Version `9c6e43b1-2a4f-4f5e-925a-ade8aaa76a2f`, runtime code from `8ba3236`. Use `https://9c6e43b1-wildeax-page.arena-riot-proxy.workers.dev/?room=wcat-review-9c6e43b1` |
+| wcat review preview | Version `d0f4e443-494e-47b8-aa64-b48d7157599c`, runtime code from `2ab9a4c`. Use `https://d0f4e443-wildeax-page.arena-riot-proxy.workers.dev/?room=wcat-review-d0f4e443` |
 | Shared room | `wildeax-2` in `src/play/room.ts`. Bump `DEFAULT_ROOM` to reset every visitor's positions |
 | Desktop code | `src/os/` (Desktop, Window, Taskbar, DesktopIcon, registry, windowState, marquee) |
 | Play layer | `src/play/` (PlayableSurface drag, sync.tsx is the only playhtml importer, StickerLayer) |
@@ -39,7 +39,7 @@ never appear anywhere public.
 
 ```bash
 npm run dev                                  # Vite dev server
-npx vitest run --maxWorkers=1 --silent       # 162 tests. One worker: this PC runs near its memory limit
+npx vitest run --maxWorkers=1 --silent       # 185 tests. One worker: this PC runs near its memory limit
 npm run build                                # tsc -b && vite build
 npx wrangler versions upload                 # preview URL, does not touch production
 npx wrangler deploy                          # PRODUCTION. Needs the owner's explicit yes, every time
@@ -48,6 +48,7 @@ cd scripts/gate && npm i && npx playwright install chromium
 node verify.mjs https://<preview>.workers.dev   # 33 checks, exit 0 when green
 node verify-wcat.mjs https://<preview>.workers.dev # focused pet interactions
 node verify-wcat-behavior.mjs https://<preview>.workers.dev # sleep, wake, poke, pet, hunting
+node verify-wcat-handling.mjs https://<preview>.workers.dev # placement, gaze, tail, peeks, dizziness, app visits
 node profile-wcat.mjs https://<preview>.workers.dev # ten-window callback timings
 node verify.mjs https://www.wildeax.com          # after wcat is promoted
 node probe.mjs https://www.wildeax.com           # read-only snapshot of the real room
@@ -82,8 +83,9 @@ Gate sequence before any production deploy: tests green, build green,
 1. **wcat** (the pet). Approved and implemented on `feat/wcat`, not deployed.
    See `docs/superpowers/specs/2026-09-05-wcat-design.md` and the verification
    records in `docs/superpowers/plans/2026-09-05-wcat.md` and
-   `docs/superpowers/plans/2026-09-05-wcat-behavior.md`. The build and
-   162 tests pass. Full lint retains its 19 baseline
+   `docs/superpowers/plans/2026-09-05-wcat-behavior.md` and
+   `docs/superpowers/plans/2026-09-05-wcat-handling.md`. The build and
+   185 tests pass. Full lint retains its 19 baseline
    errors and one warning; changed TypeScript files lint cleanly. The first
    art pass uses the documented silhouette because the body reference is
    still missing. Ask for that image for visual refinement. Production
@@ -96,7 +98,16 @@ Gate sequence before any production deploy: tests green, build green,
    Sleep now shows rising `zZZ`, followed by half-open eyes during waking.
    Phones can nap without roaming; reduced-motion sleep marks remain still.
    Enter pokes, Space lifts/drops, arrows move a held cat, Escape drops.
-   All 65 preview browser checks pass, with results in the behavior plan. Use the review-room
+   The latest pass adds gentle placement with a landing hint, short live
+   attention bouts, a bending SVG tail, deliberate petting and dizziness
+   only after hard spinning throws. Window edges have a 40% look-down pause.
+   Exposed closed app icons can invite an inspection and optional entry.
+   New apps qualify on a busy desktop; revisits require fewer than two open
+   windows. A small badge marks the app. Opening it reveals the cat inside,
+   closing/minimizing returns it to the badge, and dragging outside releases
+   it to the desktop. Visits are local to the page session.
+   All 91 preview browser checks pass: 33 main, 11 focused, 21 behavior and
+   26 handling/app-visit checks. Results are in the handling plan. Use the review-room
    URL above. The gate expects wcat, so it will fail against the older
    production version until promotion. PR: `https://github.com/Wildeax/wildeax-page/pull/1`.
 2. **Art window.** Ships with placeholders. Needs real artwork from the

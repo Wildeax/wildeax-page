@@ -231,7 +231,7 @@ the additional code. The behavior refinement adds gesture recognition and
 regression tests. No runtime dependency was added.
 
 On this PC, a five-second browser profile with ten windows open measured
-67 cat frames at 0.31 ms mean, 0.60 ms p95, and 0.70 ms maximum callback
+60 cat frames at 0.32 ms mean, 0.60 ms p95, and 0.60 ms maximum callback
 time. This measures the cat callback, not total rendering or page FPS.
 Headless WebGL on this PC makes the full page substantially slower.
 

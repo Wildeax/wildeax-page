@@ -1,6 +1,6 @@
 # wcat handling and expression pass
 
-Requested after the second preview. Continue on `feat/wcat`; update PR #1
+Requested after the previous preview. Continue on `feat/wcat`; update PR #1
 and its version preview. Production still requires separate approval.
 
 1. Reproduce slow releases falling through windows. Separate gentle
@@ -44,4 +44,25 @@ and the sticker dock obscuring a room cat. Both have regression tests.
 The new browser check also verifies the room cat can receive a pointer
 press, not just that its bounding box is inside the window.
 
-Browser and uploaded-preview verification are in progress.
+Hosted version `d0f4e443-494e-47b8-aa64-b48d7157599c`, runtime commit
+`2ab9a4c`, passed all 91 browser checks in Chromium:
+
+- `verify.mjs`: 33, including desktop windows, flights, icons and phone layout.
+- `verify-wcat.mjs`: 11 focused physics, mobile and reduced-motion checks.
+- `verify-wcat-behavior.mjs`: 21 sleep, wake, affection and hunting checks.
+- `verify-wcat-handling.mjs`: 26 handling, expression and app-visit checks.
+
+The full 185-test suite was rerun after the last code fix and passed.
+The browser connection was unavailable after the documented discovery check,
+so verification used the repo's standalone Playwright gate. Screenshots of
+placement, peek, dizziness, badge and room residence were inspected.
+
+Five seconds with ten open windows sampled 60 cat callbacks: mean 0.322 ms,
+p95 0.600 ms, maximum 0.600 ms. These are callback timings, not page FPS or
+total rendering cost. No runtime dependencies were added.
+
+Review URL:
+`https://d0f4e443-wildeax-page.arena-riot-proxy.workers.dev/?room=wcat-review-d0f4e443`
+
+The deployment list was checked after upload. Production remains 100% on
+`fa2be86e-6184-46c9-9a7b-9fb03b4f8b46`. No production deployment occurred.
