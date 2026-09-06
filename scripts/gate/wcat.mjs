@@ -2,12 +2,18 @@
 export async function checkDesktopCat(page) {
   const cat = page.locator('[data-wcat]')
   await cat.waitFor({ state: 'visible' })
+  // Let Playwright wait for a stable, hittable pose. Sampling a bounding box
+  // during an autonomous jump can aim the press at where the cat used to be.
+  await cat.hover({ timeout: 15000 })
   const start = await cat.boundingBox()
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
   await page.mouse.down()
   const destination = { x: Math.min(start.x + 222, 1250), y: Math.max(70, start.y - 120) }
   await page.mouse.move(destination.x, destination.y, { steps: 12 })
-  const lifted = await cat.getAttribute('data-form') === 'ball' && await cat.getAttribute('aria-pressed') === 'true'
+  const lifted = await page.waitForFunction(() => {
+    const el = document.querySelector('[data-wcat]')
+    return el?.dataset.form === 'ball' && el.getAttribute('aria-pressed') === 'true'
+  }, null, { timeout: 2000 }).then(() => true, () => false)
   await page.screenshot({ path: 'shot-wcat-ball.png' })
   // Resume movement after the screenshot, so the last 80 ms still describes
   // a throw. Start watching immediately on release, before another screenshot

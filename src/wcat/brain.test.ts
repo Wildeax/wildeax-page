@@ -58,6 +58,16 @@ describe('wcat brain', () => {
     expect(next.brain.mode).toBe('sit')
   })
 
+  it('rests after unrolling instead of immediately following the throw pointer', () => {
+    const pointer = { x: 700, y: 450, movedAt: 1, inside: true }
+    const brain = createBrain(8, random, pointer.movedAt)
+    const result = think(brain, createBody(world), input(8.1, { pointer }))
+    expect(result.brain.mode).toBe('sit')
+    expect(result.body.vx).toBe(0)
+    const next = think(result.brain, result.body, input(10, { pointer: { ...pointer, movedAt: 8.2 } }))
+    expect(next.brain.mode).toBe('follow')
+  })
+
   it('jumps to a reachable window and lands on its top', () => {
     const bounds = { ...world, platforms: [{ id: 'window', left: 340, right: 550, y: 450 }] }
     const pointer = { x: 420, y: 460, movedAt: 0, inside: true }

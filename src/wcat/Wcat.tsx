@@ -176,7 +176,9 @@ export function Wcat({ mobile = false, label }: { mobile?: boolean; label: strin
         if (airborne && body.ground) squashUntil = now + 0.12
         if (body.form === 'ball' && body.rest >= REST_SECONDS) {
           body = { ...body, form: 'cat', vx: 0, vy: 0, angle: 0, rest: 0, x: clamp(body.x, CAT_SIZE / 2, world.width - CAT_SIZE / 2) }
-          brain = createBrain(now, Math.random)
+          // Ignore the throw's parked pointer until it moves again. Otherwise
+          // follow can launch a new jump before the unroll transition finishes.
+          brain = createBrain(now, Math.random, pointer.movedAt)
         }
       } else {
         body.x = clamp(body.x, BALL_SIZE / 2, world.width - BALL_SIZE / 2)

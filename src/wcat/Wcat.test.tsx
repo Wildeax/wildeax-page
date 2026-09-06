@@ -5,6 +5,7 @@ import { Wcat } from './Wcat'
 
 beforeEach(() => {
   vi.useFakeTimers()
+  vi.spyOn(Math, 'random').mockReturnValue(0.5)
   vi.stubGlobal('innerWidth', 800)
   vi.stubGlobal('innerHeight', 644)
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
@@ -118,5 +119,20 @@ describe('wcat interaction', () => {
     act(() => vi.advanceTimersByTime(4000))
     expect(cat().dataset.form).toBe('cat')
     expect(cat().dataset.ground).toBe('floor')
+  })
+
+  it('finishes unrolling on the floor before following the pointer onto a window', () => {
+    const view = render(<div><div data-window="window"><div data-drag-handle /></div><Wcat label="wcat" /></div>)
+    const handle = view.container.querySelector<HTMLElement>('[data-drag-handle]')!
+    vi.spyOn(handle, 'getBoundingClientRect').mockReturnValue(new DOMRect(300, 450, 500, 33))
+    press()
+    act(() => vi.advanceTimersByTime(16))
+    move(500, 430)
+    act(() => vi.advanceTimersByTime(100))
+    fireEvent.pointerUp(cat(), { pointerId: 1, clientX: 500, clientY: 430 })
+    act(() => vi.advanceTimersByTime(4000))
+    expect(cat().dataset.form).toBe('cat')
+    expect(cat().dataset.ground).toBe('floor')
+    expect(cat().dataset.mode).toBe('sit')
   })
 })

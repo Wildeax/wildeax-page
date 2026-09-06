@@ -12,8 +12,8 @@ export interface Brain {
 export interface Pointer { x: number; y: number; movedAt: number; inside: boolean }
 export interface Input { now: number; world: World; pointer: Pointer; mobile: boolean; random: () => number }
 
-export function createBrain(now: number, random: () => number): Brain {
-  return { mode: 'sit', until: now + 2 + random() * 6, facing: 1, followedAt: -1, followUntil: 0 }
+export function createBrain(now: number, random: () => number, followedAt = -1): Brain {
+  return { mode: 'sit', until: now + 2 + random() * 6, facing: 1, followedAt, followUntil: 0 }
 }
 
 export function think(previous: Brain, current: Body, input: Input): { brain: Brain; body: Body } {
