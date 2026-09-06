@@ -1,7 +1,7 @@
 # WILDEAX OS: redesign of wildeax.com
 
 Date: 2026-09-05
-Status: approved, not implemented
+Status: shipped to production 2026-09-05 (room wildeax-2)
 Supersedes the page structure described in `2026-09-04-shared-play-layer-design.md`.
 That spec's play layer is kept and extended, not replaced.
 
