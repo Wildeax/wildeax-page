@@ -49,6 +49,15 @@ try {
   await other.clock.runFor(500)
   check('the palette spawns one private yarn toy', await yarn(page).count() === 1 && await yarn(other).count() === 0 && await page.locator('[data-sticker]').count() === 0)
   check('a new toy catches the cat’s interest', await interest(page) === 'true')
+  let previousCat = await cat(page).boundingBox()
+  const chaseSpeeds = []
+  for (let i = 0; i < 7; i++) {
+    await page.clock.runFor(100)
+    const currentCat = await cat(page).boundingBox()
+    chaseSpeeds.push(Math.abs(currentCat.x - previousCat.x) * 10)
+    previousCat = currentCat
+  }
+  check('the yarn chase includes a quick sprint instead of one constant walk', Math.max(...chaseSpeeds) > 220 && new Set(chaseSpeeds.map((speed) => Math.round(speed / 20))).size > 2, chaseSpeeds)
   await toss(page, yarn(page), 800, 400)
   const first = await yarn(page).boundingBox()
   const string = await page.locator('.wcat-string path').getAttribute('d')

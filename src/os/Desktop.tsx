@@ -207,6 +207,8 @@ export function Desktop() {
     // Only a press on bare wallpaper. Windows, icons, stickers and the taskbar
     // all stop this by being the target themselves.
     if (e.target !== e.currentTarget || e.button !== 0) return
+    e.preventDefault()
+    window.getSelection()?.removeAllRanges()
     setMenu(null)
     setSelected(new Set())
     const p = rootPoint(e)
@@ -276,6 +278,7 @@ export function Desktop() {
     <div
       ref={rootRef}
       data-desktop
+      data-selecting={marquee ? true : undefined}
       className="relative z-10 h-screen overflow-hidden"
       onPointerDown={onRootPointerDown}
       onPointerMove={onRootPointerMove}

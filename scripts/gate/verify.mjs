@@ -215,6 +215,7 @@ const marqueeMid = await page.evaluate(() => {
   const r = m.getBoundingClientRect()
   return { w: Math.round(r.width), h: Math.round(r.height) }
 })
+const marqueeTextSelection = await page.evaluate(() => getSelection()?.toString() ?? '')
 await page.screenshot({ path: 'shot-7-marquee.png' })
 await page.mouse.up()
 await page.waitForTimeout(100)
@@ -260,6 +261,7 @@ const checks = [
   ['desktop icon can be dragged', artDragged.x > artBefore.x + 60],
   ['Refresh puts the dragged icon back where it was authored', Math.abs(artAfter.x - artBefore.x) < 3],
   ['marquee draws while dragging on wallpaper and disappears on release', !!marqueeMid && marqueeMid.w > 100 && !marqueeAfter],
+  ['marquee gesture does not select page text', marqueeTextSelection === ''],
   ['right-click on wallpaper shows the menu, Refresh closes it', menuShown && menuGone],
   ['mobile shows every window as a card', m.visibleDialogs === m.dialogs && m.dialogs === s0.wins.length],
   ['mobile has no taskbar and no desktop icons', !m.taskbar && m.icons === 0],

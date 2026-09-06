@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
+import { render, screen, cleanup, createEvent, fireEvent, within } from '@testing-library/react'
 import { I18nProvider } from '@/i18n'
 import { Desktop } from '@/os/Desktop'
 import { WINDOWS } from '@/os/registry'
@@ -223,7 +223,15 @@ describe('Desktop at desktop widths', () => {
       </I18nProvider>,
     )
     const root = document.querySelector('[data-desktop]') as HTMLElement
-    fireEvent.pointerDown(root, { pointerId: 1, clientX: 500, clientY: 300, button: 0, pointerType: 'mouse' })
+    const range = document.createRange()
+    range.selectNodeContents(document.querySelector('[data-window="readme"]')!)
+    window.getSelection()?.addRange(range)
+    expect(window.getSelection()?.rangeCount).toBe(1)
+    const down = createEvent.pointerDown(root, { pointerId: 1, clientX: 500, clientY: 300, button: 0, pointerType: 'mouse', cancelable: true })
+    fireEvent(root, down)
+    expect(down.defaultPrevented).toBe(true)
+    expect(window.getSelection()?.rangeCount).toBe(0)
+    expect(root.dataset.selecting).toBe('true')
     fireEvent.pointerMove(root, { pointerId: 1, clientX: 620, clientY: 380 })
     const band = document.querySelector('[data-marquee]') as HTMLElement
     expect(band).not.toBeNull()
@@ -233,6 +241,7 @@ describe('Desktop at desktop widths', () => {
     expect(band.style.height).toBe('80px')
     fireEvent.pointerUp(root, { pointerId: 1, clientX: 620, clientY: 380 })
     expect(document.querySelector('[data-marquee]')).toBeNull()
+    expect(root.dataset.selecting).toBeUndefined()
   })
 
   it('does not start a marquee from a press on a window', () => {

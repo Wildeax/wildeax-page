@@ -127,6 +127,20 @@ describe('cat interest in the yarn', () => {
     expect(touch.swat).not.toBe(0)
   })
 
+  it('chases in quick bursts with slower beats between them', () => {
+    const body = { ...createBody(world), x: 100 }
+    const toy = createYarn(world, 0)
+    toy.body = { ...toy.body, x: 700, vx: 120 }
+    const first = playWithYarn(createPlay(), body, toy, world, 0, false, random)
+    const burstSpeed = Math.abs(first.body.vx)
+    const pause = playWithYarn(first.play, body, toy, world, 1, false, random)
+    const pauseSpeed = Math.abs(pause.body.vx)
+    const nextBurst = playWithYarn(pause.play, body, toy, world, 2, false, random)
+    expect(burstSpeed).toBeGreaterThan(220)
+    expect(pauseSpeed).toBeLessThan(burstSpeed)
+    expect(nextBurst.body.vx).toBeGreaterThan(pause.body.vx)
+  })
+
   it('lets direct interaction win, cancels removal and waits while the toy is held', () => {
     const body = createBody(world)
     const toy = createYarn(world, 1)

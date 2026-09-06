@@ -81,12 +81,14 @@ try {
     const transform = new DOMMatrixReadOnly(getComputedStyle(el).transform)
     return { covered: Number(getComputedStyle(body).zIndex) > Number(getComputedStyle(tail).zIndex),
       flat: transform.is2D && getComputedStyle(tail).transform === 'none' && getComputedStyle(tail).filter === 'none',
+      top: getComputedStyle(tail).top,
       bottom: ink.y + ink.height + Number(path.getAttribute('stroke-width')) / 2,
       stroke: path.getAttribute('stroke-width') }
   })
   check('the body covers the tail base at the rear hip', drawing.covered && start.startsWith('M40 30 C30.00 30.00'), drawing)
   check('the tail uses flat constant-width ink without a 3D transform', drawing.flat && drawing.stroke === '6', drawing)
   check('tail ink stays above the feet', drawing.bottom <= 40, drawing)
+  check('the tail sits slightly lower behind the body', drawing.top === '-3px', drawing)
   await shot(pose, 'idle')
   await pose.clock.runFor(800)
   check('only the outer curve swishes while the base stays fixed', start !== await tail.getAttribute('d') && start.split(' S')[0] === (await tail.getAttribute('d')).split(' S')[0])

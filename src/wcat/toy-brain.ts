@@ -9,6 +9,8 @@ interface ToyPlay {
   throwAt: number
   pounceAt: number
   movingAt: number
+  sprintUntil: number
+  sprintAfter: number
 }
 export interface PlayResult {
   play: ToyPlay
@@ -20,7 +22,9 @@ export interface PlayResult {
   ended: boolean
 }
 
-export function createPlay(): ToyPlay { return { phase: 'rest', until: 0, nextAt: 0, throwAt: -Infinity, pounceAt: 0, movingAt: 0 } }
+export function createPlay(): ToyPlay {
+  return { phase: 'rest', until: 0, nextAt: 0, throwAt: -Infinity, pounceAt: 0, movingAt: 0, sprintUntil: 0, sprintAfter: 0 }
+}
 
 export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState | null, world: World, now: number, blocked: boolean, random: () => number): PlayResult {
   const play = { ...previous }
@@ -49,7 +53,18 @@ export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState |
     play.throwAt = yarn.thrownAt
     play.pounceAt = now
     play.movingAt = now
+    play.sprintUntil = now + 0.45 + random() * 0.55
+    play.sprintAfter = play.sprintUntil + 0.45 + random() * 1.1
   }
+  if (now >= play.sprintAfter) {
+    play.sprintUntil = now + 0.3 + random() * 0.65
+    play.sprintAfter = play.sprintUntil + 0.45 + random() * 1.1
+  }
+  // Cats close distance in short rushes, then check the toy before bolting
+  // again. The random windows prevent a mechanical constant-speed chase.
+  const chaseSpeed = (distance: number) => now < play.sprintUntil
+    ? Math.min(330, distance * 1.2 + 125)
+    : Math.min(145, distance * 0.55 + 45)
   const swat = Math.hypot(target.x - body.x, target.y - body.y) < 42 && now - yarn.pawedAt >= 0.8 ? facing : 0
   const surface = support(body, world)
   if (!surface) return result('pounce', swat)
@@ -61,7 +76,7 @@ export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState |
       .sort((a, b) => Math.abs(a - body.x) + Math.abs(a - target.x) * 0.4 - Math.abs(b - body.x) - Math.abs(b - target.x) * 0.4)
     if (exits.length) {
       play.phase = 'chase'
-      body.vx = Math.sign(exits[0] - body.x) * 145
+      body.vx = Math.sign(exits[0] - body.x) * chaseSpeed(Math.abs(exits[0] - body.x))
       return { ...result('follow', swat), facing: body.vx < 0 ? -1 : 1 }
     }
     // Phone headings can span every reachable x. Crouch and deliberately
@@ -97,6 +112,6 @@ export function playWithYarn(previous: ToyPlay, current: Body, yarn: YarnState |
     body.vx = 0
     return result('crouch', swat)
   }
-  body.vx = Math.abs(target.x - body.x) > 32 ? facing * Math.min(175, Math.abs(target.x - body.x) + 40) : 0
+  body.vx = Math.abs(target.x - body.x) > 32 ? facing * chaseSpeed(Math.abs(target.x - body.x)) : 0
   return result('follow', swat)
 }
