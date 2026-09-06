@@ -2,14 +2,18 @@
 export async function checkDesktopCat(page) {
   const cat = page.locator('[data-wcat]')
   await cat.waitFor({ state: 'visible' })
-  // Let Playwright wait for a stable, hittable pose. Sampling a bounding box
-  // during an autonomous jump can aim the press at where the cat used to be.
+  // Freeze only the clock during pointer targeting, not the pet's state.
+  // On a slow browser the autonomous jump can move it between hover and
+  // pointerdown. Resume ordinary frame timing before checking the flight.
+  await page.clock.install()
+  await page.clock.pauseAt(new Date(Date.now() + 1000))
   await cat.hover({ timeout: 15000 })
   const start = await cat.boundingBox()
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
   await page.mouse.down()
   const destination = { x: Math.min(start.x + 222, 1250), y: Math.max(70, start.y - 120) }
   await page.mouse.move(destination.x, destination.y, { steps: 12 })
+  await page.clock.runFor(32)
   const lifted = await page.waitForFunction(() => {
     const el = document.querySelector('[data-wcat]')
     return el?.dataset.form === 'ball' && el.getAttribute('aria-pressed') === 'true'
@@ -18,8 +22,12 @@ export async function checkDesktopCat(page) {
   // Resume movement after the screenshot, so the last 80 ms still describes
   // a throw. Start watching immediately on release, before another screenshot
   // can miss the floor pose and catch the next autonomous jump instead.
-  await page.mouse.move(destination.x + 40, destination.y - 20, { steps: 3 })
+  for (let i = 1; i <= 3; i++) {
+    await page.clock.runFor(16)
+    await page.mouse.move(destination.x + i * 40 / 3, destination.y - i * 20 / 3)
+  }
   await page.mouse.up()
+  await page.clock.resume()
   const settled = await page.waitForFunction(() => {
     const el = document.querySelector('[data-wcat]')
     if (el?.dataset.form !== 'cat' || el.dataset.ground !== 'floor') return false

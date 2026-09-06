@@ -270,9 +270,11 @@ Touch cancellation, keyboard controls, and viewport integration account for
 the additional code. The behavior refinement adds gesture recognition and
 regression tests. No runtime dependency was added.
 
-On this PC, a five-second browser profile with ten windows open measured
-60 cat frames at 0.32 ms mean, 0.60 ms p95, and 0.60 ms maximum callback
-time. This measures the cat callback, not total rendering or page FPS.
+On this PC, a five-second profile of the yarn preview with ten windows open
+measured 59 callbacks for each loop. Cat callbacks took 0.46 ms mean,
+0.80 ms p95 and 0.90 ms maximum. Yarn callbacks took 1.00 ms mean,
+2.10 ms p95 and 2.50 ms maximum. These are separate callback timings,
+not total rendering or page FPS.
 Headless WebGL on this PC makes the full page substantially slower.
 
 ## Out of scope
